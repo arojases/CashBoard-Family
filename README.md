@@ -39,6 +39,8 @@ Cuentas de prueba: Administrador `admin@cashboard.cl` / `Admin1234!`; Visita `vi
 
 El administrador puede gestionar usuarios desde **Configuración**: crear cuentas, cambiar datos o roles y eliminar usuarios. La cuenta Visita no ve Configuración y todas sus operaciones de escritura son rechazadas por la API.
 
+Desde la misma pantalla el administrador puede personalizar el nombre del plan familiar. El modo nocturno y el menú de cierre de sesión están disponibles en la barra lateral.
+
 ## Ejecutar API y base de datos
 
 Con Docker instalado:

@@ -67,6 +67,17 @@ app.MapPost("/api/auth/login", async (LoginRequest request, AppDbContext db) =>
 
 var secured = app.MapGroup("/api").RequireAuthorization();
 
+secured.MapGet("/family-profile", async(ClaimsPrincipal p,AppDbContext db)=>
+{
+    var family=await db.Families.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==p.FamilyId());
+    return family is null?Results.NotFound():Results.Ok(new{id=family.Id,name=family.Name,currency=family.Currency});
+});
+secured.MapPut("/family-profile", async(FamilyRequest r,ClaimsPrincipal p,AppDbContext db)=>
+{
+    var name=r.Name.Trim();if(name.Length is<2 or>50)return Results.BadRequest(new{message="El nombre debe tener entre 2 y 50 caracteres."});
+    var family=await db.Families.FirstOrDefaultAsync(x=>x.Id==p.FamilyId());if(family is null)return Results.NotFound();family.Name=name;await db.SaveChangesAsync();return Results.NoContent();
+}).RequireAuthorization("AdminOnly");
+
 secured.MapGet("/dashboard/summary", async (ClaimsPrincipal principal, AppDbContext db) =>
 {
     var familyId = principal.FamilyId(); var now = DateTime.UtcNow;
@@ -194,6 +205,7 @@ record GoalRequest(string Name,decimal TargetAmount,decimal CurrentAmount,DateTi
 record DebtRequest(string Name,string Entity,decimal TotalAmount,decimal PaidAmount,DateTime DueDate,int Installments);
 record UserRequest(string Name,string Email,string Role,string? Password);
 record UserResponse(Guid Id,string Name,string Email,string Role);
+record FamilyRequest(string Name);
 
 static class ClaimsExtensions
 {

@@ -10,6 +10,7 @@ export interface Budget{id:string;categoryId:string|null;name:string;limit:numbe
 export interface Goal{id:string;name:string;targetAmount:number;currentAmount:number;targetDate:string;description:string}
 export interface Debt{id:string;name:string;entity:string;totalAmount:number;paidAmount:number;dueDate:string;installments:number}
 export interface FamilyUser{id:string;name:string;email:string;role:'Admin'|'Visitor'}
+export interface FamilyProfile{id:string;name:string;currency:string}
 
 @Injectable({providedIn:'root'})
 export class ApiService{
@@ -18,12 +19,13 @@ export class ApiService{
  user=signal<AuthUser|null>(JSON.parse(localStorage.getItem('cashboard_user')||'null'));
  login(email:string,password:string){return this.http.post<{token:string;user:AuthUser}>(`${this.base}/auth/login`,{email,password}).pipe(tap(r=>{localStorage.setItem('cashboard_token',r.token);localStorage.setItem('cashboard_user',JSON.stringify(r.user));this.user.set(r.user);this.authenticated.set(true)}));}
  logout(){localStorage.removeItem('cashboard_token');localStorage.removeItem('cashboard_user');this.user.set(null);this.authenticated.set(false)}
- initialData(){return forkJoin({summary:this.http.get<Summary>(`${this.base}/dashboard/summary`),transactions:this.http.get<ApiTransaction[]>(`${this.base}/transactions`),categories:this.http.get<Category[]>(`${this.base}/categories`),budgets:this.http.get<Budget[]>(`${this.base}/budgets/current`),goals:this.http.get<Goal[]>(`${this.base}/savings-goals`),debts:this.http.get<Debt[]>(`${this.base}/debts`)})}
+ initialData(){return forkJoin({family:this.http.get<FamilyProfile>(`${this.base}/family-profile`),summary:this.http.get<Summary>(`${this.base}/dashboard/summary`),transactions:this.http.get<ApiTransaction[]>(`${this.base}/transactions`),categories:this.http.get<Category[]>(`${this.base}/categories`),budgets:this.http.get<Budget[]>(`${this.base}/budgets/current`),goals:this.http.get<Goal[]>(`${this.base}/savings-goals`),debts:this.http.get<Debt[]>(`${this.base}/debts`)})}
  createTransaction(body:{description:string;amount:number;type:string;categoryId:string;paymentMethod:string}){return this.http.post<ApiTransaction>(`${this.base}/transactions`,body)}
  deleteTransaction(id:string){return this.http.delete<void>(`${this.base}/transactions/${id}`)}
  save(resource:string,body:unknown,id?:string):Observable<void>{return id?this.http.put<void>(`${this.base}/${resource}/${id}`,body):this.http.post<void>(`${this.base}/${resource}`,body)}
  remove(resource:string,id:string){return this.http.delete<void>(`${this.base}/${resource}/${id}`)}
  getUsers(){return this.http.get<FamilyUser[]>(`${this.base}/users`)}
+ updateFamilyName(name:string){return this.http.put<void>(`${this.base}/family-profile`,{name})}
 }
 
 export const authInterceptor:HttpInterceptorFn=(request,next)=>{

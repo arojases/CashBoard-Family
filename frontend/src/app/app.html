@@ -11,7 +11,7 @@
       ><button (click)="menu.set(false)">×</button>
     </div>
     <div class="family">
-      <i>MF</i><span><strong>Mi familia</strong><small>Plan familiar</small></span
+      <i>MF</i><span><strong>{{familyName()}}</strong><small>Plan familiar</small></span
       >⌄
     </div>
     <nav>
@@ -27,11 +27,13 @@
       }
     </nav>
     <footer>
-      @if(isAdmin()){<button (click)="select('usuarios')">⚙ Configuración</button>}<button (click)="api.logout()">⇥ Cerrar sesión</button>
-      <div class="profile">
+      <button (click)="dark.set(!dark())"><i>{{dark()?'☀':'☾'}}</i>{{dark()?'Modo claro':'Modo nocturno'}}</button>
+      @if(isAdmin()){<button (click)="select('usuarios')"><i>⚙</i>Configuración</button>}
+      <div class="profile" (click)="profileMenu.set(!profileMenu())">
         <i>{{api.user()?.name?.slice(0,2)}}</i><span><strong>{{api.user()?.name}}</strong><small>{{isAdmin()?'Administrador':'Visita'}}</small></span
-        >⋮
+        >⌄
       </div>
+      @if(profileMenu()){<div class="profile-dropdown"><button (click)="api.logout()">⇥ Cerrar sesión</button></div>}
     </footer>
   </aside>
   @if (menu()) {
@@ -46,10 +48,6 @@
           [ngModel]="query()"
           (ngModelChange)="query.set($event)"
         /><kbd>⌘ K</kbd>
-      </div>
-      <div>
-        <button (click)="dark.set(!dark())">{{ dark() ? '☀' : '☾' }}</button><button>♢</button
-        ><i class="avatar">AR</i>
       </div>
     </header>
     <section>
@@ -204,6 +202,7 @@
           </div>
         }
         @if(view()==='usuarios' && isAdmin()){
+          <article class="family-settings"><div><h3>Nombre del plan familiar</h3><small>Puede ser formal, divertido o como tu familia prefiera.</small></div><form (submit)="$event.preventDefault();updateFamilyName(planName.value)"><input #planName required minlength="2" maxlength="50" [value]="familyName()" placeholder="Ej. Los Avengers del Ahorro"><button class="primary">Guardar nombre</button></form></article>
           <article class="table users-table"><div class="thead"><span>Usuario</span><span>Correo</span><span>Rol</span><span>Acciones</span></div>
           @for(u of users();track u.id){<div class="trow"><span><i class="blue">{{u.name.slice(0,2).toUpperCase()}}</i><strong>{{u.name}}</strong></span><span>{{u.email}}</span><span><b class="role-pill">{{u.role==='Admin'?'Administrador':'Visita'}}</b></span><span class="row-actions"><button class="icon-action edit" title="Editar" (click)="openForm(u)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg></button><button class="icon-action delete" title="Eliminar" (click)="remove('users',u.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></span></div>} @empty {<div class="empty-state">No hay usuarios.</div>}
           </article>
