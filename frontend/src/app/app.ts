@@ -1,14 +1,21 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ApiService, Category, Summary } from './api.service';
 type View = 'dashboard' | 'movimientos' | 'presupuestos' | 'metas' | 'deudas' | 'reportes';
 interface Tx { name: string; category: string; date: string; amount: number; type: 'income' | 'expense'; icon: string; color: string }
-@Component({ selector: 'app-root', imports: [CommonModule, FormsModule], templateUrl: './app.html', styleUrl: './app.scss' })
+@Component({ selector: 'app-root', imports: [CommonModule, FormsModule], templateUrl: './app.html', styleUrls: ['./app.scss', './login.scss'] })
 export class App {
-    view = signal<View>('dashboard'); dark = signal(false); menu = signal(false); modal = signal(false); query = signal(''); type = signal('Todos');
+    api = inject(ApiService); loading = signal(false); error = signal(''); summary = signal<Summary>({ income: 0, expenses: 0, balance: 0, saved: 0, pendingDebt: 0 }); categories = signal<Category[]>([]);
+    view = signal<View>('dashboard'); dark = signal(false); menu = signal(false); modal = signal(false); query = signal(''); type = signal('Todos'); formType = signal<'income'|'expense'>('expense');
     nav = [['dashboard', 'Inicio', '⌂'], ['movimientos', 'Movimientos', '↕'], ['presupuestos', 'Presupuestos', '▣'], ['metas', 'Metas de ahorro', '◎'], ['deudas', 'Deudas', '▤'], ['reportes', 'Reportes', '◫']] as const;
     txs = signal<Tx[]>([{ name: 'Supermercado Jumbo', category: 'Alimentación', date: 'Hoy, 12:30', amount: -58490, type: 'expense', icon: '🛒', color: 'peach' }, { name: 'Sueldo mensual', category: 'Sueldo', date: 'Hoy, 09:15', amount: 1850000, type: 'income', icon: '↙', color: 'mint' }, { name: 'Cuenta de electricidad', category: 'Servicios', date: 'Ayer, 18:42', amount: -47600, type: 'expense', icon: '⚡', color: 'yellow' }, { name: 'Transferencia ahorro', category: 'Ahorro', date: '26 ago, 10:20', amount: -120000, type: 'expense', icon: '◈', color: 'blue' }, { name: 'Uber', category: 'Transporte', date: '25 ago, 22:14', amount: -8950, type: 'expense', icon: '🚕', color: 'purple' }]);
     filtered = computed(() => this.txs().filter(t => (this.type() === 'Todos' || (this.type() === 'Ingresos' && t.type === 'income') || (this.type() === 'Gastos' && t.type === 'expense')) && (t.name + t.category).toLowerCase().includes(this.query().toLowerCase())));
+    metricCards = computed(() => [['↙', 'Ingresos del mes', this.money(this.summary().income), 'Datos actuales', 'mint'], ['↗', 'Gastos del mes', this.money(this.summary().expenses), 'Datos actuales', 'peach'], ['◈', 'Balance disponible', this.money(this.summary().balance), 'Balance del mes', 'blue'], ['◎', 'Total ahorrado', this.money(this.summary().saved), 'Metas activas', 'purple']]);
+    constructor(){if(this.api.authenticated())this.loadData()}
+    login(email:string,password:string){this.loading.set(true);this.error.set('');this.api.login(email,password).subscribe({next:()=>{this.loading.set(false);this.loadData()},error:e=>{this.loading.set(false);this.error.set(e.error?.message||'No fue posible iniciar sesión. Comprueba que la API esté activa.')}})}
+    loadData(){this.loading.set(true);this.api.initialData().subscribe({next:data=>{this.summary.set(data.summary);this.categories.set(data.categories);this.txs.set(data.transactions.map(t=>({name:t.name,category:t.category,date:new Date(t.date).toLocaleDateString('es-CL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),amount:t.type==='income'?t.amount:-t.amount,type:t.type,icon:t.type==='income'?'↙':'↗',color:t.type==='income'?'mint':'peach'})));this.loading.set(false)},error:()=>{this.loading.set(false);this.error.set('No se pudo conectar con la API.')}})}
     money(n: number) { return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Math.abs(n)) } select(v: string) { this.view.set(v as View); this.menu.set(false) }
-    add(name: string, amount: string, kind: string) { const value = Number(amount); if (!name || !value) return; this.txs.update(x => [{ name, category: kind === 'income' ? 'Otros ingresos' : 'Otros', date: 'Ahora', amount: kind === 'income' ? value : -value, type: kind as 'income' | 'expense', icon: kind === 'income' ? '↙' : '↗', color: kind === 'income' ? 'mint' : 'peach' }, ...x]); this.modal.set(false) }
+    categoriesFor(type:string){return this.categories().filter(category=>category.type===type)}
+    add(name:string,amount:string,kind:string,categoryId:string){const value=Number(amount),category=this.categories().find(c=>c.id===categoryId);if(!name||!value||!category)return;this.loading.set(true);this.api.createTransaction({description:name,amount:value,type:kind,categoryId:category.id,paymentMethod:'Transferencia'}).subscribe({next:()=>{this.modal.set(false);this.loadData()},error:()=>{this.loading.set(false);this.error.set('No fue posible guardar el movimiento.')}})}
 }

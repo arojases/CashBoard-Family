@@ -11,6 +11,7 @@ services:
     build: ./backend/CashBoard.Api
     environment:
       ASPNETCORE_URLS: http://+:8080
+      DatabaseProvider: Postgres
       ConnectionStrings__DefaultConnection: Host=postgres;Database=cashboard;Username=cashboard;Password=${POSTGRES_PASSWORD:-local_demo_only}
       Jwt__Key: ${JWT_KEY:-DevelopmentOnlyKey-ReplaceBeforeProduction-123456789}
     ports: ["8080:8080"]

@@ -5,8 +5,8 @@ Dashboard financiero familiar full stack para administrar ingresos, gastos, pres
 ## Stack
 
 - Angular 20 standalone + Signals + SCSS
-- ASP.NET Core 8 Minimal API, JWT y Swagger
-- Entity Framework Core + PostgreSQL 16
+- ASP.NET Core 10 Minimal API, JWT y Swagger
+- Entity Framework Core + SQLite local / PostgreSQL 16 en producción
 - Docker Compose
 
 ## Ejecutar el frontend
@@ -17,7 +17,25 @@ npm install
 npm start
 ```
 
-Abre `http://localhost:4200`. La demo visual funciona sin backend y permite navegar, buscar, filtrar, cambiar el tema y agregar movimientos durante la sesión.
+Abre `http://localhost:4200`. Para iniciar sesión y persistir datos, ejecuta también la API como se indica a continuación.
+
+## MVP funcional local
+
+Inicia la API en una terminal (requiere .NET SDK 10):
+
+```bash
+cd backend/CashBoard.Api
+dotnet run
+```
+
+En otra terminal inicia Angular con su proxy local:
+
+```bash
+cd frontend
+npm start
+```
+
+Acceso demo: `demo@cashboard.cl` / `Demo1234!`. La API crea automáticamente `cashboard-demo.db`, carga categorías y movimientos iniciales, y Angular persiste los nuevos movimientos mediante JWT. La base SQLite local está ignorada por Git.
 
 ## Ejecutar API y base de datos
 
@@ -31,7 +49,7 @@ Opcionalmente copia `.env.example` como `.env` y reemplaza sus valores. El archi
 
 API: `http://localhost:8080` · Swagger: `http://localhost:8080/swagger` · PostgreSQL: puerto `5432`.
 
-Para desarrollo local con .NET SDK 8, crea la migración inicial desde `backend/CashBoard.Api`: `dotnet ef migrations add InitialCreate` y luego `dotnet ef database update`.
+Para desarrollo local usa .NET SDK 10. SQLite se crea y carga automáticamente; Docker utiliza PostgreSQL mediante `DatabaseProvider=Postgres`.
 
 ## Arquitectura y permisos
 
@@ -44,6 +62,8 @@ La separación `frontend` / `backend` mantiene la UI desacoplada de la API REST.
 | POST | `/api/auth/login` | Autenticación y JWT |
 | GET | `/api/dashboard/summary` | Métricas del mes |
 | GET/POST | `/api/transactions` | Movimientos |
+| DELETE | `/api/transactions/{id}` | Eliminar un movimiento propio de la familia |
+| GET | `/api/categories` | Categorías familiares |
 | GET | `/api/budgets/current` | Presupuestos vigentes |
 | GET/POST | `/api/savings-goals` | Metas de ahorro |
 | GET | `/api/debts` | Deudas |

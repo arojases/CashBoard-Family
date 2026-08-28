@@ -4,6 +4,9 @@
 **/dist/
 **/.angular/
 **/*.user
+**/*.db
+**/*.db-shm
+**/*.db-wal
 **/appsettings.Production.json
 .env
 .env.*
