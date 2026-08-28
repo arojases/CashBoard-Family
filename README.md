@@ -17,7 +17,7 @@ npm install
 npm start
 ```
 
-`npm start` levanta automáticamente la API y Angular en la misma terminal. Abre la dirección `Local` que muestre Angular; para detener todo presiona `Ctrl+C`.
+`npm start` levanta automáticamente la API y Angular en la misma terminal, y abre CashBoard en `http://localhost:4300`. Para detener todo presiona `Ctrl+C`.
 
 ## MVP funcional local
 

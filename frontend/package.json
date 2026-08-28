@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "node scripts/start-dev.mjs",
-    "start:frontend": "ng serve",
+    "start:frontend": "ng serve --port 4300 --open",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
