@@ -9,7 +9,7 @@ Dashboard financiero familiar full stack para administrar ingresos, gastos, pres
 - Entity Framework Core + SQLite local / PostgreSQL 16 en producción
 - Docker Compose
 
-## Ejecutar el frontend
+## Ejecutar la aplicación
 
 ```bash
 cd frontend
@@ -17,18 +17,18 @@ npm install
 npm start
 ```
 
-Abre `http://localhost:4200`. Para iniciar sesión y persistir datos, ejecuta también la API como se indica a continuación.
+`npm start` levanta automáticamente la API y Angular en la misma terminal. Abre la dirección `Local` que muestre Angular; para detener todo presiona `Ctrl+C`.
 
 ## MVP funcional local
 
-Inicia la API en una terminal (requiere .NET SDK 10):
+También puedes iniciar cada servicio por separado para depuración. API (requiere .NET SDK 10):
 
 ```bash
 cd backend/CashBoard.Api
 dotnet run
 ```
 
-En otra terminal inicia Angular con su proxy local:
+Frontend Angular:
 
 ```bash
 cd frontend
