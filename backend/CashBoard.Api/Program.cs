@@ -124,6 +124,7 @@ secured.MapGet("/budgets/current", (ClaimsPrincipal p, AppDbContext db) => db.Bu
 secured.MapGet("/savings-goals", (ClaimsPrincipal p, AppDbContext db) => db.SavingsGoals.Where(x => x.FamilyId == p.FamilyId()).ToListAsync());
 secured.MapGet("/debts", (ClaimsPrincipal p, AppDbContext db) => db.Debts.Where(x => x.FamilyId == p.FamilyId()).ToListAsync());
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapGet("/", () => Results.Redirect("/swagger"));
 app.Run();
 
 record LoginRequest(string Email, string Password);
