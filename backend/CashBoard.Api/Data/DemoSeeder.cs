@@ -10,29 +10,46 @@ public static class DemoSeeder
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.EnsureCreatedAsync();
-        if (await db.Families.AnyAsync()) return;
 
-        var family = new Family { Name = "Familia Rojas", Currency = "CLP" };
-        var user = new User { Family = family, Name = "Ariel Rojas", Email = "demo@cashboard.cl", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo1234!"), Role = FamilyRole.Admin };
-        var categories = new[]
+        var family = await db.Families.FirstOrDefaultAsync();
+        if (family is null)
         {
-            new Category { FamilyId = family.Id, Name = "Sueldo", Type = TransactionType.Income, Color = "#42B596" },
-            new Category { FamilyId = family.Id, Name = "Otros ingresos", Type = TransactionType.Income, Color = "#42B596" },
-            new Category { FamilyId = family.Id, Name = "Alimentación", Type = TransactionType.Expense, Color = "#EC826D" },
-            new Category { FamilyId = family.Id, Name = "Servicios", Type = TransactionType.Expense, Color = "#E4B548" },
-            new Category { FamilyId = family.Id, Name = "Transporte", Type = TransactionType.Expense, Color = "#7964D1" },
-            new Category { FamilyId = family.Id, Name = "Ahorro", Type = TransactionType.Expense, Color = "#627CDB" },
-            new Category { FamilyId = family.Id, Name = "Otros", Type = TransactionType.Expense, Color = "#8D909D" }
-        };
-        db.AddRange(family, user); db.Categories.AddRange(categories); await db.SaveChangesAsync();
-        var now = DateTime.UtcNow;
-        db.Transactions.AddRange(
-            new Transaction { FamilyId = family.Id, UserId = user.Id, CategoryId = categories[0].Id, Type = TransactionType.Income, Amount = 1850000, Description = "Sueldo mensual", Date = now.AddHours(-3), PaymentMethod = "Transferencia" },
-            new Transaction { FamilyId = family.Id, UserId = user.Id, CategoryId = categories[2].Id, Type = TransactionType.Expense, Amount = 58490, Description = "Supermercado Jumbo", Date = now.AddHours(-1), PaymentMethod = "Débito" },
-            new Transaction { FamilyId = family.Id, UserId = user.Id, CategoryId = categories[3].Id, Type = TransactionType.Expense, Amount = 47600, Description = "Cuenta de electricidad", Date = now.AddDays(-1), PaymentMethod = "Transferencia" },
-            new Transaction { FamilyId = family.Id, UserId = user.Id, CategoryId = categories[4].Id, Type = TransactionType.Expense, Amount = 8950, Description = "Uber", Date = now.AddDays(-2), PaymentMethod = "Crédito" });
-        db.SavingsGoals.Add(new SavingsGoal { FamilyId = family.Id, Name = "Fondo de emergencia", TargetAmount = 4000000, CurrentAmount = 2400000, TargetDate = now.AddMonths(8) });
-        db.Debts.Add(new Debt { FamilyId = family.Id, Name = "Tarjeta de crédito", Entity = "Banco", TotalAmount = 850000, PaidAmount = 430000, DueDate = now.AddDays(12), Installments = 3 });
+            family = new Family { Name = "Mi familia", Currency = "CLP" };
+            db.Families.Add(family); await db.SaveChangesAsync();
+        }
+
+        var visitorExists = await db.Users.AnyAsync(x => x.Role == FamilyRole.Visitor);
+        if (!visitorExists)
+        {
+            // Migración única desde la antigua demo: elimina solo registros financieros ficticios.
+            db.Transactions.RemoveRange(db.Transactions);
+            db.Budgets.RemoveRange(db.Budgets);
+            db.SavingsGoals.RemoveRange(db.SavingsGoals);
+            db.Debts.RemoveRange(db.Debts);
+            await db.SaveChangesAsync();
+        }
+
+        var admin = await db.Users.FirstOrDefaultAsync(x => x.Role == FamilyRole.Admin);
+        if (admin is null)
+            db.Users.Add(new User { FamilyId = family.Id, Name = "Administrador", Email = "admin@cashboard.cl", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin1234!"), Role = FamilyRole.Admin });
+        else
+        {
+            admin.Email = "admin@cashboard.cl"; admin.Name = "Administrador";
+            admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin1234!");
+        }
+
+        if (!visitorExists)
+            db.Users.Add(new User { FamilyId = family.Id, Name = "Visita", Email = "visita@cashboard.cl", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Visita1234!"), Role = FamilyRole.Visitor });
+
+        if (!await db.Categories.AnyAsync(x => x.FamilyId == family.Id))
+            db.Categories.AddRange(
+                Category(family.Id,"Sueldo",TransactionType.Income,"#42B596"), Category(family.Id,"Otros ingresos",TransactionType.Income,"#42B596"),
+                Category(family.Id,"Alimentación",TransactionType.Expense,"#EC826D"), Category(family.Id,"Servicios",TransactionType.Expense,"#E4B548"),
+                Category(family.Id,"Transporte",TransactionType.Expense,"#7964D1"), Category(family.Id,"Vivienda",TransactionType.Expense,"#627CDB"),
+                Category(family.Id,"Salud",TransactionType.Expense,"#E96D92"), Category(family.Id,"Ocio",TransactionType.Expense,"#8D909D"),
+                Category(family.Id,"Otros",TransactionType.Expense,"#8D909D"));
         await db.SaveChangesAsync();
     }
+
+    private static Category Category(Guid familyId,string name,TransactionType type,string color) => new() { FamilyId=familyId,Name=name,Type=type,Color=color };
 }

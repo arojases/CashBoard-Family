@@ -29,7 +29,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         ValidateIssuerSigningKey = true, ValidIssuer = jwt["Issuer"], ValidAudience = jwt["Audience"],
         IssuerSigningKey = key, ClockSkew = TimeSpan.FromMinutes(1)
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => options.AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(FamilyRole.Admin))));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
@@ -86,7 +86,7 @@ secured.MapGet("/dashboard/summary", async (ClaimsPrincipal principal, AppDbCont
 secured.MapGet("/transactions", async (ClaimsPrincipal principal, AppDbContext db) =>
     await db.Transactions.AsNoTracking().Where(x => x.FamilyId == principal.FamilyId())
         .Include(x => x.Category).OrderByDescending(x => x.Date)
-        .Select(x => new TransactionResponse(x.Id, x.Description, x.Category!.Name, x.Date, x.Amount, x.Type == TransactionType.Income ? "income" : "expense", x.PaymentMethod))
+        .Select(x => new TransactionResponse(x.Id, x.Description, x.CategoryId, x.Category!.Name, x.Date, x.Amount, x.Type == TransactionType.Income ? "income" : "expense", x.PaymentMethod))
         .ToListAsync());
 
 secured.MapPost("/transactions", async (CreateTransactionRequest request, ClaimsPrincipal principal, AppDbContext db) =>
@@ -106,8 +106,19 @@ secured.MapPost("/transactions", async (CreateTransactionRequest request, Claims
         Date = request.Date?.ToUniversalTime() ?? DateTime.UtcNow
     };
     db.Transactions.Add(transaction); await db.SaveChangesAsync();
-    return Results.Created($"/api/transactions/{transaction.Id}", new TransactionResponse(transaction.Id, transaction.Description, category.Name, transaction.Date, transaction.Amount, transaction.Type == TransactionType.Income ? "income" : "expense", transaction.PaymentMethod));
-});
+    return Results.Created($"/api/transactions/{transaction.Id}", new TransactionResponse(transaction.Id, transaction.Description, category.Id, category.Name, transaction.Date, transaction.Amount, transaction.Type == TransactionType.Income ? "income" : "expense", transaction.PaymentMethod));
+}).RequireAuthorization("AdminOnly");
+
+secured.MapPut("/transactions/{id:guid}", async (Guid id, CreateTransactionRequest request, ClaimsPrincipal principal, AppDbContext db) =>
+{
+    var familyId=principal.FamilyId(); var item=await db.Transactions.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==familyId);
+    var category=await db.Categories.FirstOrDefaultAsync(x=>x.Id==request.CategoryId&&x.FamilyId==familyId);
+    if(item is null||category is null) return Results.NotFound();
+    var type=request.Type.Equals("income",StringComparison.OrdinalIgnoreCase)?TransactionType.Income:TransactionType.Expense;
+    if(request.Amount<=0||category.Type!=type) return Results.BadRequest(new{message="Datos de movimiento inválidos."});
+    item.Description=request.Description.Trim();item.Amount=request.Amount;item.Type=type;item.CategoryId=category.Id;item.PaymentMethod=request.PaymentMethod;item.Date=request.Date?.ToUniversalTime()??item.Date;
+    await db.SaveChangesAsync();return Results.NoContent();
+}).RequireAuthorization("AdminOnly");
 
 secured.MapDelete("/transactions/{id:guid}", async (Guid id, ClaimsPrincipal principal, AppDbContext db) =>
 {
@@ -115,21 +126,48 @@ secured.MapDelete("/transactions/{id:guid}", async (Guid id, ClaimsPrincipal pri
     if (transaction is null) return Results.NotFound();
     db.Transactions.Remove(transaction); await db.SaveChangesAsync();
     return Results.NoContent();
-});
+}).RequireAuthorization("AdminOnly");
 
 secured.MapGet("/categories", async (ClaimsPrincipal principal, AppDbContext db) =>
     await db.Categories.AsNoTracking().Where(x => x.FamilyId == principal.FamilyId()).OrderBy(x => x.Name)
         .Select(x => new { x.Id, x.Name, type = x.Type == TransactionType.Income ? "income" : "expense", x.Color }).ToListAsync());
-secured.MapGet("/budgets/current", (ClaimsPrincipal p, AppDbContext db) => db.Budgets.Include(x => x.Category).Where(x => x.FamilyId == p.FamilyId()).ToListAsync());
-secured.MapGet("/savings-goals", (ClaimsPrincipal p, AppDbContext db) => db.SavingsGoals.Where(x => x.FamilyId == p.FamilyId()).ToListAsync());
-secured.MapGet("/debts", (ClaimsPrincipal p, AppDbContext db) => db.Debts.Where(x => x.FamilyId == p.FamilyId()).ToListAsync());
+
+secured.MapPost("/categories", async(CategoryRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(string.IsNullOrWhiteSpace(r.Name))return Results.BadRequest();var x=new Category{FamilyId=p.FamilyId(),Name=r.Name.Trim(),Color=r.Color,Type=r.Type=="income"?TransactionType.Income:TransactionType.Expense};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
+secured.MapPut("/categories/{id:guid}", async(Guid id,CategoryRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Categories.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.Color=r.Color;x.Type=r.Type=="income"?TransactionType.Income:TransactionType.Expense;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+secured.MapDelete("/categories/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Categories.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();if(await db.Transactions.AnyAsync(t=>t.CategoryId==id)||await db.Budgets.AnyAsync(b=>b.CategoryId==id))return Results.Conflict(new{message="La categoría está en uso."});db.Remove(x);await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+
+secured.MapGet("/budgets/current", async(ClaimsPrincipal p,AppDbContext db)=>{var fid=p.FamilyId();var now=DateTime.UtcNow;var budgets=await db.Budgets.AsNoTracking().Include(x=>x.Category).Where(x=>x.FamilyId==fid).ToListAsync();var expenses=await db.Transactions.AsNoTracking().Where(x=>x.FamilyId==fid&&x.Type==TransactionType.Expense&&x.Date.Year==now.Year&&x.Date.Month==now.Month).Select(x=>new{x.CategoryId,x.Amount}).ToListAsync();return budgets.Select(x=>new{id=x.Id,categoryId=x.CategoryId,name=x.Category?.Name??"General",limit=x.Limit,used=x.CategoryId is null?expenses.Sum(e=>e.Amount):expenses.Where(e=>e.CategoryId==x.CategoryId).Sum(e=>e.Amount),x.Month,x.Year});});
+secured.MapPost("/budgets", async(BudgetRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.Limit<=0)return Results.BadRequest();var x=new Budget{FamilyId=p.FamilyId(),CategoryId=r.CategoryId,Limit=r.Limit,Month=r.Month,Year=r.Year};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
+secured.MapPut("/budgets/{id:guid}", async(Guid id,BudgetRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Budgets.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.CategoryId=r.CategoryId;x.Limit=r.Limit;x.Month=r.Month;x.Year=r.Year;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+secured.MapDelete("/budgets/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>await DeleteOwned(db,db.Budgets,id,p.FamilyId())).RequireAuthorization("AdminOnly");
+
+secured.MapGet("/savings-goals", async(ClaimsPrincipal p,AppDbContext db)=>await db.SavingsGoals.AsNoTracking().Where(x=>x.FamilyId==p.FamilyId()).OrderBy(x=>x.TargetDate).ToListAsync());
+secured.MapPost("/savings-goals", async(GoalRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.TargetAmount<=0)return Results.BadRequest();var x=new SavingsGoal{FamilyId=p.FamilyId(),Name=r.Name.Trim(),TargetAmount=r.TargetAmount,CurrentAmount=r.CurrentAmount,TargetDate=r.TargetDate,Description=r.Description};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
+secured.MapPut("/savings-goals/{id:guid}", async(Guid id,GoalRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.SavingsGoals.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.TargetAmount=r.TargetAmount;x.CurrentAmount=r.CurrentAmount;x.TargetDate=r.TargetDate;x.Description=r.Description;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+secured.MapDelete("/savings-goals/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>await DeleteOwned(db,db.SavingsGoals,id,p.FamilyId())).RequireAuthorization("AdminOnly");
+
+secured.MapGet("/debts", async(ClaimsPrincipal p,AppDbContext db)=>await db.Debts.AsNoTracking().Where(x=>x.FamilyId==p.FamilyId()).OrderBy(x=>x.DueDate).ToListAsync());
+secured.MapPost("/debts", async(DebtRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.TotalAmount<=0)return Results.BadRequest();var x=new Debt{FamilyId=p.FamilyId(),Name=r.Name.Trim(),Entity=r.Entity,TotalAmount=r.TotalAmount,PaidAmount=r.PaidAmount,DueDate=r.DueDate,Installments=r.Installments};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
+secured.MapPut("/debts/{id:guid}", async(Guid id,DebtRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Debts.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.Entity=r.Entity;x.TotalAmount=r.TotalAmount;x.PaidAmount=r.PaidAmount;x.DueDate=r.DueDate;x.Installments=r.Installments;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+secured.MapDelete("/debts/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>await DeleteOwned(db,db.Debts,id,p.FamilyId())).RequireAuthorization("AdminOnly");
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapGet("/", () => Results.Redirect("/swagger"));
 app.Run();
 
+static async Task<IResult> DeleteOwned<T>(AppDbContext db,DbSet<T> set,Guid id,Guid familyId) where T:class
+{
+    var x=await set.FindAsync(id);if(x is null)return Results.NotFound();
+    var property=typeof(T).GetProperty("FamilyId");if(property?.GetValue(x) is not Guid owner||owner!=familyId)return Results.NotFound();
+    set.Remove(x);await db.SaveChangesAsync();return Results.NoContent();
+}
+
 record LoginRequest(string Email, string Password);
 record CreateTransactionRequest(string Description, decimal Amount, string Type, Guid CategoryId, string PaymentMethod, DateTime? Date);
-record TransactionResponse(Guid Id, string Name, string Category, DateTime Date, decimal Amount, string Type, string PaymentMethod);
+record TransactionResponse(Guid Id, string Name, Guid CategoryId, string Category, DateTime Date, decimal Amount, string Type, string PaymentMethod);
+record CategoryRequest(string Name,string Type,string Color);
+record BudgetRequest(Guid? CategoryId,decimal Limit,int Month,int Year);
+record GoalRequest(string Name,decimal TargetAmount,decimal CurrentAmount,DateTime TargetDate,string Description);
+record DebtRequest(string Name,string Entity,decimal TotalAmount,decimal PaidAmount,DateTime DueDate,int Installments);
 
 static class ClaimsExtensions
 {

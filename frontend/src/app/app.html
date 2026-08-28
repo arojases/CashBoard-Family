@@ -1,7 +1,7 @@
 @if (!api.authenticated()) {
   <div class="login-page">
-    <section class="login-copy"><div class="login-logo">C</div><h1>Tu familia, tus metas,<br><span>un solo lugar.</span></h1><p>Organiza las finanzas del hogar con claridad y toma mejores decisiones en familia.</p><div class="login-preview"><b>Balance disponible</b><strong>$1.153.550</strong><small>Demo CashBoard Family</small></div></section>
-    <section class="login-panel"><form (submit)="$event.preventDefault(); login(email.value, password.value)"><div class="mobile-logo">C</div><label class="eyebrow">BIENVENIDO</label><h2>Inicia sesión</h2><p>Accede a tu panel financiero familiar.</p><label>Correo electrónico<input #email type="email" required value="demo@cashboard.cl" autocomplete="email"></label><label>Contraseña<input #password type="password" required value="Demo1234!" autocomplete="current-password"></label>@if(error()){<div class="form-error">{{error()}}</div>}<button class="primary" [disabled]="loading()">{{loading()?'Conectando...':'Ingresar a CashBoard'}}</button><small class="demo-hint">Usuario demo precargado para desarrollo local</small></form></section>
+    <section class="login-copy"><div class="login-logo">C</div><h1>Tu familia, tus metas,<br><span>un solo lugar.</span></h1><p>Organiza las finanzas del hogar con claridad y toma mejores decisiones en familia.</p><div class="login-preview"><b>Control financiero</b><strong>Datos reales</strong><small>Sin información precargada</small></div></section>
+    <section class="login-panel"><form (submit)="$event.preventDefault(); login(email.value, password.value)"><div class="mobile-logo">C</div><label class="eyebrow">BIENVENIDO</label><h2>Inicia sesión</h2><p>Accede a tu panel financiero familiar.</p><label>Correo electrónico<input #email type="email" required autocomplete="email"></label><label>Contraseña<input #password type="password" required autocomplete="current-password"></label>@if(error()){<div class="form-error">{{error()}}</div>}<button class="primary" [disabled]="loading()">{{loading()?'Conectando...':'Ingresar a CashBoard'}}</button><small class="demo-hint">Usa una de las cuentas de prueba Admin o Visita</small></form></section>
   </div>
 } @else {
 <div class="app" [class.dark]="dark()">
@@ -11,7 +11,7 @@
       ><button (click)="menu.set(false)">×</button>
     </div>
     <div class="family">
-      <i>FR</i><span><strong>Familia Rojas</strong><small>Plan familiar</small></span
+      <i>MF</i><span><strong>Mi familia</strong><small>Plan familiar</small></span
       >⌄
     </div>
     <nav>
@@ -29,7 +29,7 @@
     <footer>
       <button>⚙ Configuración</button><button>? Ayuda y soporte</button><button (click)="api.logout()">⇥ Cerrar sesión</button>
       <div class="profile">
-        <i>AR</i><span><strong>Ariel Rojas</strong><small>Administrador</small></span
+        <i>{{api.user()?.name?.slice(0,2)}}</i><span><strong>{{api.user()?.name}}</strong><small>{{isAdmin()?'Administrador':'Visita'}}</small></span
         >⋮
       </div>
     </footer>
@@ -57,71 +57,23 @@
         <div class="welcome">
           <div>
             <label>VIERNES, 28 DE AGOSTO</label>
-            <h1>Buenos días, Ariel 👋</h1>
+            <h1>Hola, {{api.user()?.name}} 👋</h1>
             <small>Aquí tienes el resumen financiero de tu familia.</small>
           </div>
-          <button class="primary" (click)="modal.set(true)">＋ Nuevo movimiento</button>
+          @if(isAdmin()){<button class="primary" (click)="select('movimientos');openForm()">＋ Nuevo movimiento</button>}
         </div>
         <div class="metrics">
           @for (m of metricCards(); track m[1]) {
-            <article>
+            <article class="kpi-link" (click)="select(m[3])">
               <div>
                 <i [class]="m[4]">{{ m[0] }}</i
-                ><em>{{ m[3] }}</em>
+                ><em>Ver →</em>
               </div>
               <label>{{ m[1] }}</label>
               <h2>{{ m[2] }}</h2>
-              <small>Comparado con el mes anterior</small>
+              <small>Datos reales del período actual</small>
             </article>
           }
-        </div>
-        <div class="charts">
-          <article>
-            <div class="title">
-              <span
-                ><h3>Flujo de dinero</h3>
-                <small>Ingresos y gastos de los últimos 6 meses</small></span
-              ><select>
-                <option>Últimos 6 meses</option>
-              </select>
-            </div>
-            <div class="legend"><i></i>Ingresos <i></i>Gastos</div>
-            <svg viewBox="0 0 700 210" preserveAspectRatio="none">
-              <path class="grid" d="M0 30H700M0 85H700M0 140H700M0 195H700" />
-              <path
-                class="income"
-                d="M0 115 C70 65 95 100 140 80 S230 115 280 78 S360 48 420 58 S510 85 560 55 S650 35 700 42"
-              />
-              <path
-                class="expense"
-                d="M0 160 C75 145 100 165 145 142 S235 152 280 132 S370 148 420 118 S510 140 560 122 S650 152 700 135"
-              />
-            </svg>
-            <div class="months">
-              <span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span
-              ><span>Ago</span>
-            </div>
-          </article>
-          <article>
-            <div class="title">
-              <span
-                ><h3>Gastos por categoría</h3>
-                <small>Distribución de agosto</small></span
-              >•••
-            </div>
-            <div class="donut-row">
-              <div class="donut">
-                <span><b>$1,32M</b><small>Total gastos</small></span>
-              </div>
-              <div class="cats">
-                <span>● Vivienda <b>32%</b></span
-                ><span>● Alimentación <b>24%</b></span
-                ><span>● Transporte <b>16%</b></span
-                ><span>● Servicios <b>14%</b></span
-                ><span>● Otros <b>14%</b></span>
-              </div>
-            </div>
-          </article>
         </div>
         <div class="bottom">
           <article>
@@ -141,31 +93,28 @@
                   >{{ t.amount > 0 ? '+' : '−' }}{{ money(t.amount) }}</b
                 >
               </div>
+            } @empty {
+              <div class="empty-state">Sin movimientos todavía. Registra el primero para comenzar.</div>
             }
           </article>
           <article>
             <div class="title">
               <span
                 ><h3>Presupuestos</h3>
-                <small>Uso durante agosto</small></span
+                <small>Uso del mes actual</small></span
               ><button (click)="select('presupuestos')">Ver detalle →</button>
             </div>
-            @for (
-              b of [
-                ['Alimentación', '$180.000 / $250.000', '72', 'ok'],
-                ['Transporte', '$63.200 / $80.000', '79', 'warn'],
-                ['Ocio', '$67.500 / $60.000', '100', 'danger'],
-              ];
-              track b[0]
-            ) {
+            @for (b of budgets().slice(0,3); track b.id) {
               <div class="budget">
                 <span
-                  ><strong>{{ b[0] }}</strong
-                  ><small>{{ b[1] }}</small></span
+                  ><strong>{{ b.name }}</strong
+                  ><small>{{ money(b.used) }} / {{ money(b.limit) }}</small></span
                 >
-                <div><i [class]="b[3]" [style.width.%]="b[2]"></i></div>
-                <small>{{ b[2] }}% usado</small>
+                <div><i [class]="b.used>b.limit?'danger':'ok'" [style.width.%]="percent(b.used,b.limit)"></i></div>
+                <small>{{ percent(b.used,b.limit) }}% usado</small>
               </div>
+            } @empty {
+              <div class="empty-state">No hay presupuestos configurados.</div>
             }
           </article>
         </div>
@@ -188,7 +137,7 @@
             </h1>
             <small>Mantén las finanzas de tu familia bajo control.</small>
           </div>
-          <button class="primary" (click)="modal.set(true)">＋ Agregar</button>
+          @if(isAdmin() && view()!=='reportes'){<button class="primary" (click)="openForm()">＋ Agregar</button>} @else if(!isAdmin()){<span class="readonly-badge">Solo lectura</span>}
         </div>
         @if (view() === 'movimientos') {
           <div class="filters">
@@ -211,86 +160,54 @@
               <div class="trow">
                 <span
                   ><i [class]="t.color">{{ t.icon }}</i
-                  ><strong>{{ t.name }}</strong></span
+                  ><strong>{{ t.name }}</strong>@if(isAdmin()){<span class="row-actions"><button (click)="openForm(t)">✎</button><button (click)="remove('transactions',t.id)">×</button></span>}</span
                 ><span>{{ t.category }}</span
                 ><span>{{ t.date }}</span
                 ><b [class.positive]="t.amount > 0"
                   >{{ t.amount > 0 ? '+' : '−' }}{{ money(t.amount) }}</b
                 >
               </div>
-            }
+            } @empty {<div class="empty-state">No hay movimientos registrados.</div>}
           </article>
         }
         @if (view() === 'presupuestos') {
           <div class="cards">
-            @for (
-              x of [
-                ['Alimentación', '$180.000', '$250.000', '72'],
-                ['Transporte', '$63.200', '$80.000', '79'],
-                ['Ocio', '$67.500', '$60.000', '100'],
-                ['Servicios', '$94.500', '$150.000', '63'],
-              ];
-              track x[0]
-            ) {
+            @for (x of budgets(); track x.id) {
               <article>
-                <i class="blue">▣</i>
-                <h3>{{ x[0] }}</h3>
-                <h2>{{ x[1] }}</h2>
-                <small>de {{ x[2] }}</small>
-                <div class="bar"><i [style.width.%]="x[3]"></i></div>
-                <b>{{ x[3] }}% utilizado</b>
+                <i class="blue">▣</i><h3>{{ x.name }}</h3><h2>{{ money(x.used) }}</h2><small>de {{ money(x.limit) }}</small>
+                <div class="bar"><i [style.width.%]="percent(x.used,x.limit)"></i></div><b>{{ percent(x.used,x.limit) }}% utilizado</b>
+                @if(isAdmin()){<div class="card-actions"><button (click)="openForm(x)">Editar</button><button (click)="remove('budgets',x.id)">Eliminar</button></div>}
               </article>
-            }
+            } @empty {<div class="empty-state">No hay presupuestos. Crea el primero para controlar tus límites.</div>}
           </div>
         }
         @if (view() === 'metas') {
           <div class="cards">
-            @for (
-              x of [
-                ['🏠', 'Fondo de emergencia', '$2.400.000', '$4.000.000', '60'],
-                ['✈', 'Vacaciones familiares', '$980.000', '$2.000.000', '49'],
-                ['💻', 'Notebook nuevo', '$460.000', '$1.000.000', '46'],
-              ];
-              track x[1]
-            ) {
+            @for (x of goals(); track x.id) {
               <article>
-                <i>{{ x[0] }}</i>
-                <h3>{{ x[1] }}</h3>
-                <h2>{{ x[2] }}</h2>
-                <small>Objetivo: {{ x[3] }}</small>
-                <div class="bar"><i [style.width.%]="x[4]"></i></div>
-                <b>{{ x[4] }}% completado</b>
+                <i>◎</i><h3>{{ x.name }}</h3><h2>{{ money(x.currentAmount) }}</h2><small>Objetivo: {{ money(x.targetAmount) }}</small>
+                <div class="bar"><i [style.width.%]="percent(x.currentAmount,x.targetAmount)"></i></div><b>{{ percent(x.currentAmount,x.targetAmount) }}% completado</b>
+                @if(isAdmin()){<div class="card-actions"><button (click)="openForm(x)">Editar</button><button (click)="remove('savings-goals',x.id)">Eliminar</button></div>}
               </article>
-            }
+            } @empty {<div class="empty-state">No hay metas de ahorro registradas.</div>}
           </div>
         }
         @if (view() === 'deudas') {
           <div class="cards">
-            @for (
-              x of [
-                ['Tarjeta de crédito', '$420.000', '$850.000', '49'],
-                ['Crédito automotriz', '$4.280.000', '$8.400.000', '51'],
-                ['Compra en cuotas', '$120.000', '$360.000', '33'],
-              ];
-              track x[0]
-            ) {
+            @for (x of debts(); track x.id) {
               <article>
-                <i class="peach">▤</i>
-                <h3>{{ x[0] }}</h3>
-                <h2>{{ x[1] }}</h2>
-                <small>pendiente de {{ x[2] }}</small>
-                <div class="bar orange"><i [style.width.%]="x[3]"></i></div>
-                <b>{{ x[3] }}% pagado</b>
+                <i class="peach">▤</i><h3>{{ x.name }}</h3><h2>{{ money(x.totalAmount-x.paidAmount) }}</h2><small>pendiente de {{ money(x.totalAmount) }}</small>
+                <div class="bar orange"><i [style.width.%]="percent(x.paidAmount,x.totalAmount)"></i></div><b>{{ percent(x.paidAmount,x.totalAmount) }}% pagado</b>
+                @if(isAdmin()){<div class="card-actions"><button (click)="openForm(x)">Editar</button><button (click)="remove('debts',x.id)">Eliminar</button></div>}
               </article>
-            }
+            } @empty {<div class="empty-state">No hay deudas registradas.</div>}
           </div>
         }
         @if (view() === 'reportes') {
           <article class="report">
             <i>◫</i>
-            <h2>Tu salud financiera va mejorando</h2>
-            <p>Este mes gastaste un 3,2% menos y ahorraste un 24,7% más que en julio.</p>
-            <button class="primary">Exportar reporte</button>
+            <h2>Resumen financiero actual</h2>
+            <p>Ingresos {{money(summary().income)}} · Gastos {{money(summary().expenses)}} · Balance {{money(summary().balance)}}</p>
           </article>
         }
       }
@@ -298,22 +215,24 @@
   </main>
   @if (modal()) {
     <div class="modal-bg" (click)="modal.set(false)">
-      <form
-        (click)="$event.stopPropagation()"
-        (submit)="$event.preventDefault(); add(n.value, a.value, k.value, c.value)"
-      >
-        <header>
-          <h2>Nuevo movimiento</h2>
-          <button type="button" (click)="modal.set(false)">×</button>
-        </header>
-        <label>Descripción<input #n required placeholder="Ej. Compra supermercado" /></label
-        ><label>Monto<input #a required type="number" placeholder="$ 0" /></label
-        ><label
-          >Tipo<select #k name="transactionType" [ngModel]="formType()" (ngModelChange)="formType.set($event)">
-            <option value="expense">Gasto</option>
-            <option value="income">Ingreso</option>
-          </select></label><label>Categoría<select #c required>@for(category of categoriesFor(formType());track category.id){<option [value]="category.id">{{category.name}}</option>}</select></label
-        ><button class="primary">Guardar movimiento</button>
+      <form (click)="$event.stopPropagation()" (submit)="$event.preventDefault();save()">
+        <header><h2>{{draft.id?'Editar':'Nuevo'}} registro</h2><button type="button" (click)="modal.set(false)">×</button></header>
+        @if(view()==='movimientos'){
+          <label>Descripción<input name="name" [(ngModel)]="draft.name" required></label><label>Monto<input name="amount" [(ngModel)]="draft.amount" required type="number" min="1"></label>
+          <label>Tipo<select name="type" [ngModel]="formType()" (ngModelChange)="formType.set($event);draft.categoryId=categoriesFor($event)[0]?.id"><option value="expense">Gasto</option><option value="income">Ingreso</option></select></label>
+          <label>Categoría<select name="category" [(ngModel)]="draft.categoryId" required>@for(c of categoriesFor(formType());track c.id){<option [value]="c.id">{{c.name}}</option>}</select></label>
+          <label>Método de pago<select name="payment" [(ngModel)]="draft.paymentMethod"><option>Efectivo</option><option>Débito</option><option>Crédito</option><option>Transferencia</option></select></label>
+        }
+        @if(view()==='presupuestos'){
+          <label>Categoría<select name="category" [(ngModel)]="draft.categoryId" required>@for(c of categoriesFor('expense');track c.id){<option [value]="c.id">{{c.name}}</option>}</select></label><label>Límite mensual<input name="limit" [(ngModel)]="draft.limit" required type="number" min="1"></label><label>Mes<input name="month" [(ngModel)]="draft.month" type="number" min="1" max="12"></label><label>Año<input name="year" [(ngModel)]="draft.year" type="number"></label>
+        }
+        @if(view()==='metas'){
+          <label>Nombre<input name="name" [(ngModel)]="draft.name" required></label><label>Monto objetivo<input name="target" [(ngModel)]="draft.targetAmount" required type="number" min="1"></label><label>Monto actual<input name="current" [(ngModel)]="draft.currentAmount" type="number" min="0"></label><label>Fecha objetivo<input name="date" [(ngModel)]="draft.targetDate" type="date" required></label><label>Descripción<input name="description" [(ngModel)]="draft.description"></label>
+        }
+        @if(view()==='deudas'){
+          <label>Nombre<input name="name" [(ngModel)]="draft.name" required></label><label>Entidad<input name="entity" [(ngModel)]="draft.entity"></label><label>Monto total<input name="total" [(ngModel)]="draft.totalAmount" required type="number" min="1"></label><label>Monto pagado<input name="paid" [(ngModel)]="draft.paidAmount" type="number" min="0"></label><label>Vencimiento<input name="due" [(ngModel)]="draft.dueDate" type="date" required></label><label>Cuotas<input name="installments" [(ngModel)]="draft.installments" type="number" min="1"></label>
+        }
+        @if(error()){<div class="form-error">{{error()}}</div>}<button class="primary" [disabled]="loading()">{{loading()?'Guardando...':'Guardar'}}</button>
       </form>
     </div>
   }

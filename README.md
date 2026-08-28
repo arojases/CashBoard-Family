@@ -35,7 +35,7 @@ cd frontend
 npm start
 ```
 
-Acceso demo: `demo@cashboard.cl` / `Demo1234!`. La API crea automáticamente `cashboard-demo.db`, carga categorías y movimientos iniciales, y Angular persiste los nuevos movimientos mediante JWT. La base SQLite local está ignorada por Git.
+Cuentas de prueba: Administrador `admin@cashboard.cl` / `Admin1234!`; Visita `visita@cashboard.cl` / `Visita1234!`. La API crea automáticamente `cashboard-demo.db` sin registros financieros precargados. La base SQLite local está ignorada por Git.
 
 ## Ejecutar API y base de datos
 
@@ -53,7 +53,7 @@ Para desarrollo local usa .NET SDK 10. SQLite se crea y carga automáticamente; 
 
 ## Arquitectura y permisos
 
-La separación `frontend` / `backend` mantiene la UI desacoplada de la API REST. Todas las entidades pertenecen a una familia mediante `FamilyId`. JWT incorpora `familyId` y rol; los roles previstos son `Admin`, `Member` y `Guest`. Antes de producción se debe aplicar un filtro global por familia, políticas por rol, secretos por variables de entorno y refresh tokens.
+La separación `frontend` / `backend` mantiene la UI desacoplada de la API REST. Todas las entidades se filtran por el `FamilyId` incorporado en el JWT. `Admin` dispone de CRUD completo; `Visitor` puede consultar dashboard y módulos, pero la API rechaza sus mutaciones con HTTP 403. Antes de producción deben configurarse secretos por variables de entorno y refresh tokens.
 
 ## API principal
 
