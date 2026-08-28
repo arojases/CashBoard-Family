@@ -9,6 +9,7 @@ export interface ApiTransaction{id:string;name:string;categoryId:string;category
 export interface Budget{id:string;categoryId:string|null;name:string;limit:number;used:number;month:number;year:number}
 export interface Goal{id:string;name:string;targetAmount:number;currentAmount:number;targetDate:string;description:string}
 export interface Debt{id:string;name:string;entity:string;totalAmount:number;paidAmount:number;dueDate:string;installments:number}
+export interface FamilyUser{id:string;name:string;email:string;role:'Admin'|'Visitor'}
 
 @Injectable({providedIn:'root'})
 export class ApiService{
@@ -22,6 +23,7 @@ export class ApiService{
  deleteTransaction(id:string){return this.http.delete<void>(`${this.base}/transactions/${id}`)}
  save(resource:string,body:unknown,id?:string):Observable<void>{return id?this.http.put<void>(`${this.base}/${resource}/${id}`,body):this.http.post<void>(`${this.base}/${resource}`,body)}
  remove(resource:string,id:string){return this.http.delete<void>(`${this.base}/${resource}/${id}`)}
+ getUsers(){return this.http.get<FamilyUser[]>(`${this.base}/users`)}
 }
 
 export const authInterceptor:HttpInterceptorFn=(request,next)=>{

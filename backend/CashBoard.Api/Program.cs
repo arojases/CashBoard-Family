@@ -137,19 +137,43 @@ secured.MapPut("/categories/{id:guid}", async(Guid id,CategoryRequest r,ClaimsPr
 secured.MapDelete("/categories/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Categories.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();if(await db.Transactions.AnyAsync(t=>t.CategoryId==id)||await db.Budgets.AnyAsync(b=>b.CategoryId==id))return Results.Conflict(new{message="La categoría está en uso."});db.Remove(x);await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
 
 secured.MapGet("/budgets/current", async(ClaimsPrincipal p,AppDbContext db)=>{var fid=p.FamilyId();var now=DateTime.UtcNow;var budgets=await db.Budgets.AsNoTracking().Include(x=>x.Category).Where(x=>x.FamilyId==fid).ToListAsync();var expenses=await db.Transactions.AsNoTracking().Where(x=>x.FamilyId==fid&&x.Type==TransactionType.Expense&&x.Date.Year==now.Year&&x.Date.Month==now.Month).Select(x=>new{x.CategoryId,x.Amount}).ToListAsync();return budgets.Select(x=>new{id=x.Id,categoryId=x.CategoryId,name=x.Category?.Name??"General",limit=x.Limit,used=x.CategoryId is null?expenses.Sum(e=>e.Amount):expenses.Where(e=>e.CategoryId==x.CategoryId).Sum(e=>e.Amount),x.Month,x.Year});});
-secured.MapPost("/budgets", async(BudgetRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.Limit<=0)return Results.BadRequest();var x=new Budget{FamilyId=p.FamilyId(),CategoryId=r.CategoryId,Limit=r.Limit,Month=r.Month,Year=r.Year};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
-secured.MapPut("/budgets/{id:guid}", async(Guid id,BudgetRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Budgets.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.CategoryId=r.CategoryId;x.Limit=r.Limit;x.Month=r.Month;x.Year=r.Year;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+secured.MapPost("/budgets", async(BudgetRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.Limit<=0||r.Month is<1 or>12||r.Year<2000)return Results.BadRequest(new{message="Límite, mes o año inválidos."});var x=new Budget{FamilyId=p.FamilyId(),CategoryId=r.CategoryId,Limit=r.Limit,Month=r.Month,Year=r.Year};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
+secured.MapPut("/budgets/{id:guid}", async(Guid id,BudgetRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.Limit<=0||r.Month is<1 or>12||r.Year<2000)return Results.BadRequest(new{message="Datos inválidos."});var x=await db.Budgets.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.CategoryId=r.CategoryId;x.Limit=r.Limit;x.Month=r.Month;x.Year=r.Year;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
 secured.MapDelete("/budgets/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>await DeleteOwned(db,db.Budgets,id,p.FamilyId())).RequireAuthorization("AdminOnly");
 
 secured.MapGet("/savings-goals", async(ClaimsPrincipal p,AppDbContext db)=>await db.SavingsGoals.AsNoTracking().Where(x=>x.FamilyId==p.FamilyId()).OrderBy(x=>x.TargetDate).ToListAsync());
-secured.MapPost("/savings-goals", async(GoalRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.TargetAmount<=0)return Results.BadRequest();var x=new SavingsGoal{FamilyId=p.FamilyId(),Name=r.Name.Trim(),TargetAmount=r.TargetAmount,CurrentAmount=r.CurrentAmount,TargetDate=r.TargetDate,Description=r.Description};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
-secured.MapPut("/savings-goals/{id:guid}", async(Guid id,GoalRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.SavingsGoals.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.TargetAmount=r.TargetAmount;x.CurrentAmount=r.CurrentAmount;x.TargetDate=r.TargetDate;x.Description=r.Description;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+secured.MapPost("/savings-goals", async(GoalRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(string.IsNullOrWhiteSpace(r.Name)||r.TargetAmount<=0||r.CurrentAmount<0)return Results.BadRequest(new{message="Nombre e importes válidos son obligatorios."});var x=new SavingsGoal{FamilyId=p.FamilyId(),Name=r.Name.Trim(),TargetAmount=r.TargetAmount,CurrentAmount=r.CurrentAmount,TargetDate=r.TargetDate,Description=r.Description};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
+secured.MapPut("/savings-goals/{id:guid}", async(Guid id,GoalRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(string.IsNullOrWhiteSpace(r.Name)||r.TargetAmount<=0||r.CurrentAmount<0)return Results.BadRequest(new{message="Datos inválidos."});var x=await db.SavingsGoals.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.TargetAmount=r.TargetAmount;x.CurrentAmount=r.CurrentAmount;x.TargetDate=r.TargetDate;x.Description=r.Description;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
 secured.MapDelete("/savings-goals/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>await DeleteOwned(db,db.SavingsGoals,id,p.FamilyId())).RequireAuthorization("AdminOnly");
 
 secured.MapGet("/debts", async(ClaimsPrincipal p,AppDbContext db)=>await db.Debts.AsNoTracking().Where(x=>x.FamilyId==p.FamilyId()).OrderBy(x=>x.DueDate).ToListAsync());
-secured.MapPost("/debts", async(DebtRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(r.TotalAmount<=0)return Results.BadRequest();var x=new Debt{FamilyId=p.FamilyId(),Name=r.Name.Trim(),Entity=r.Entity,TotalAmount=r.TotalAmount,PaidAmount=r.PaidAmount,DueDate=r.DueDate,Installments=r.Installments};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
-secured.MapPut("/debts/{id:guid}", async(Guid id,DebtRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Debts.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.Entity=r.Entity;x.TotalAmount=r.TotalAmount;x.PaidAmount=r.PaidAmount;x.DueDate=r.DueDate;x.Installments=r.Installments;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
+secured.MapPost("/debts", async(DebtRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(string.IsNullOrWhiteSpace(r.Name)||r.TotalAmount<=0||r.PaidAmount<0||r.PaidAmount>r.TotalAmount||r.Installments<1)return Results.BadRequest(new{message="Los montos o cuotas no son válidos."});var x=new Debt{FamilyId=p.FamilyId(),Name=r.Name.Trim(),Entity=r.Entity,TotalAmount=r.TotalAmount,PaidAmount=r.PaidAmount,DueDate=r.DueDate,Installments=r.Installments};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
+secured.MapPut("/debts/{id:guid}", async(Guid id,DebtRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(string.IsNullOrWhiteSpace(r.Name)||r.TotalAmount<=0||r.PaidAmount<0||r.PaidAmount>r.TotalAmount||r.Installments<1)return Results.BadRequest(new{message="Datos inválidos."});var x=await db.Debts.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.Entity=r.Entity;x.TotalAmount=r.TotalAmount;x.PaidAmount=r.PaidAmount;x.DueDate=r.DueDate;x.Installments=r.Installments;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
 secured.MapDelete("/debts/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>await DeleteOwned(db,db.Debts,id,p.FamilyId())).RequireAuthorization("AdminOnly");
+
+secured.MapGet("/users", async(ClaimsPrincipal p,AppDbContext db)=>await db.Users.AsNoTracking().Where(x=>x.FamilyId==p.FamilyId()).OrderBy(x=>x.Name).Select(x=>new UserResponse(x.Id,x.Name,x.Email,x.Role.ToString())).ToListAsync()).RequireAuthorization("AdminOnly");
+secured.MapPost("/users", async(UserRequest r,ClaimsPrincipal p,AppDbContext db)=>
+{
+    var email=r.Email.Trim().ToLowerInvariant();
+    if(string.IsNullOrWhiteSpace(r.Name)||!email.Contains('@')||string.IsNullOrWhiteSpace(r.Password)||r.Password.Length<8)return Results.BadRequest(new{message="Nombre, correo y contraseña de al menos 8 caracteres son obligatorios."});
+    if(await db.Users.AnyAsync(x=>x.Email==email))return Results.Conflict(new{message="Ese correo ya está registrado."});
+    var role=r.Role.Equals("Admin",StringComparison.OrdinalIgnoreCase)?FamilyRole.Admin:FamilyRole.Visitor;
+    var x=new User{FamilyId=p.FamilyId(),Name=r.Name.Trim(),Email=email,PasswordHash=BCrypt.Net.BCrypt.HashPassword(r.Password),Role=role};db.Add(x);await db.SaveChangesAsync();return Results.Ok(new UserResponse(x.Id,x.Name,x.Email,x.Role.ToString()));
+}).RequireAuthorization("AdminOnly");
+secured.MapPut("/users/{id:guid}", async(Guid id,UserRequest r,ClaimsPrincipal p,AppDbContext db)=>
+{
+    var x=await db.Users.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();var email=r.Email.Trim().ToLowerInvariant();
+    if(string.IsNullOrWhiteSpace(r.Name)||!email.Contains('@')||(r.Password?.Length>0&&r.Password.Length<8))return Results.BadRequest(new{message="Datos de usuario inválidos."});
+    if(await db.Users.AnyAsync(u=>u.Email==email&&u.Id!=id))return Results.Conflict(new{message="Ese correo ya está registrado."});
+    var newRole=r.Role.Equals("Admin",StringComparison.OrdinalIgnoreCase)?FamilyRole.Admin:FamilyRole.Visitor;
+    if(x.Role==FamilyRole.Admin&&newRole!=FamilyRole.Admin&&await db.Users.CountAsync(u=>u.FamilyId==p.FamilyId()&&u.Role==FamilyRole.Admin)==1)return Results.Conflict(new{message="Debe existir al menos un administrador."});
+    x.Name=r.Name.Trim();x.Email=email;x.Role=newRole;if(!string.IsNullOrWhiteSpace(r.Password))x.PasswordHash=BCrypt.Net.BCrypt.HashPassword(r.Password);await db.SaveChangesAsync();return Results.NoContent();
+}).RequireAuthorization("AdminOnly");
+secured.MapDelete("/users/{id:guid}", async(Guid id,ClaimsPrincipal p,AppDbContext db)=>
+{
+    if(id==p.UserId())return Results.Conflict(new{message="No puedes eliminar tu propia cuenta."});var x=await db.Users.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();
+    if(x.Role==FamilyRole.Admin&&await db.Users.CountAsync(u=>u.FamilyId==p.FamilyId()&&u.Role==FamilyRole.Admin)==1)return Results.Conflict(new{message="Debe existir al menos un administrador."});db.Remove(x);await db.SaveChangesAsync();return Results.NoContent();
+}).RequireAuthorization("AdminOnly");
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapGet("/", () => Results.Redirect("/swagger"));
 app.Run();
@@ -168,6 +192,8 @@ record CategoryRequest(string Name,string Type,string Color);
 record BudgetRequest(Guid? CategoryId,decimal Limit,int Month,int Year);
 record GoalRequest(string Name,decimal TargetAmount,decimal CurrentAmount,DateTime TargetDate,string Description);
 record DebtRequest(string Name,string Entity,decimal TotalAmount,decimal PaidAmount,DateTime DueDate,int Installments);
+record UserRequest(string Name,string Email,string Role,string? Password);
+record UserResponse(Guid Id,string Name,string Email,string Role);
 
 static class ClaimsExtensions
 {

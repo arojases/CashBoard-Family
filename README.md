@@ -37,6 +37,8 @@ npm start
 
 Cuentas de prueba: Administrador `admin@cashboard.cl` / `Admin1234!`; Visita `visita@cashboard.cl` / `Visita1234!`. La API crea automáticamente `cashboard-demo.db` sin registros financieros precargados. La base SQLite local está ignorada por Git.
 
+El administrador puede gestionar usuarios desde **Configuración**: crear cuentas, cambiar datos o roles y eliminar usuarios. La cuenta Visita no ve Configuración y todas sus operaciones de escritura son rechazadas por la API.
+
 ## Ejecutar API y base de datos
 
 Con Docker instalado:

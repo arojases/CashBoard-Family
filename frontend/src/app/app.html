@@ -27,7 +27,7 @@
       }
     </nav>
     <footer>
-      <button>⚙ Configuración</button><button>? Ayuda y soporte</button><button (click)="api.logout()">⇥ Cerrar sesión</button>
+      @if(isAdmin()){<button (click)="select('usuarios')">⚙ Configuración</button>}<button (click)="api.logout()">⇥ Cerrar sesión</button>
       <div class="profile">
         <i>{{api.user()?.name?.slice(0,2)}}</i><span><strong>{{api.user()?.name}}</strong><small>{{isAdmin()?'Administrador':'Visita'}}</small></span
         >⋮
@@ -132,7 +132,7 @@
                       ? 'Metas de ahorro'
                       : view() === 'deudas'
                         ? 'Deudas y pagos'
-                        : 'Reportes'
+                        : view() === 'usuarios' ? 'Configuración de usuarios' : 'Reportes'
               }}
             </h1>
             <small>Mantén las finanzas de tu familia bajo control.</small>
@@ -160,7 +160,7 @@
               <div class="trow">
                 <span
                   ><i [class]="t.color">{{ t.icon }}</i
-                  ><strong>{{ t.name }}</strong>@if(isAdmin()){<span class="row-actions"><button (click)="openForm(t)">✎</button><button (click)="remove('transactions',t.id)">×</button></span>}</span
+                  ><strong>{{ t.name }}</strong>@if(isAdmin()){<span class="row-actions"><button class="icon-action edit" title="Editar" (click)="openForm(t)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg></button><button class="icon-action delete" title="Eliminar" (click)="remove('transactions',t.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></span>}</span
                 ><span>{{ t.category }}</span
                 ><span>{{ t.date }}</span
                 ><b [class.positive]="t.amount > 0"
@@ -176,7 +176,7 @@
               <article>
                 <i class="blue">▣</i><h3>{{ x.name }}</h3><h2>{{ money(x.used) }}</h2><small>de {{ money(x.limit) }}</small>
                 <div class="bar"><i [style.width.%]="percent(x.used,x.limit)"></i></div><b>{{ percent(x.used,x.limit) }}% utilizado</b>
-                @if(isAdmin()){<div class="card-actions"><button (click)="openForm(x)">Editar</button><button (click)="remove('budgets',x.id)">Eliminar</button></div>}
+                @if(isAdmin()){<div class="card-actions"><button class="edit" (click)="openForm(x)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg> Editar</button><button class="delete" (click)="remove('budgets',x.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg> Eliminar</button></div>}
               </article>
             } @empty {<div class="empty-state">No hay presupuestos. Crea el primero para controlar tus límites.</div>}
           </div>
@@ -187,7 +187,7 @@
               <article>
                 <i>◎</i><h3>{{ x.name }}</h3><h2>{{ money(x.currentAmount) }}</h2><small>Objetivo: {{ money(x.targetAmount) }}</small>
                 <div class="bar"><i [style.width.%]="percent(x.currentAmount,x.targetAmount)"></i></div><b>{{ percent(x.currentAmount,x.targetAmount) }}% completado</b>
-                @if(isAdmin()){<div class="card-actions"><button (click)="openForm(x)">Editar</button><button (click)="remove('savings-goals',x.id)">Eliminar</button></div>}
+                @if(isAdmin()){<div class="card-actions"><button class="edit" (click)="openForm(x)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg> Editar</button><button class="delete" (click)="remove('savings-goals',x.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg> Eliminar</button></div>}
               </article>
             } @empty {<div class="empty-state">No hay metas de ahorro registradas.</div>}
           </div>
@@ -198,10 +198,15 @@
               <article>
                 <i class="peach">▤</i><h3>{{ x.name }}</h3><h2>{{ money(x.totalAmount-x.paidAmount) }}</h2><small>pendiente de {{ money(x.totalAmount) }}</small>
                 <div class="bar orange"><i [style.width.%]="percent(x.paidAmount,x.totalAmount)"></i></div><b>{{ percent(x.paidAmount,x.totalAmount) }}% pagado</b>
-                @if(isAdmin()){<div class="card-actions"><button (click)="openForm(x)">Editar</button><button (click)="remove('debts',x.id)">Eliminar</button></div>}
+                @if(isAdmin()){<div class="card-actions"><button class="edit" (click)="openForm(x)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg> Editar</button><button class="delete" (click)="remove('debts',x.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg> Eliminar</button></div>}
               </article>
             } @empty {<div class="empty-state">No hay deudas registradas.</div>}
           </div>
+        }
+        @if(view()==='usuarios' && isAdmin()){
+          <article class="table users-table"><div class="thead"><span>Usuario</span><span>Correo</span><span>Rol</span><span>Acciones</span></div>
+          @for(u of users();track u.id){<div class="trow"><span><i class="blue">{{u.name.slice(0,2).toUpperCase()}}</i><strong>{{u.name}}</strong></span><span>{{u.email}}</span><span><b class="role-pill">{{u.role==='Admin'?'Administrador':'Visita'}}</b></span><span class="row-actions"><button class="icon-action edit" title="Editar" (click)="openForm(u)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg></button><button class="icon-action delete" title="Eliminar" (click)="remove('users',u.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></span></div>} @empty {<div class="empty-state">No hay usuarios.</div>}
+          </article>
         }
         @if (view() === 'reportes') {
           <article class="report">
@@ -214,23 +219,26 @@
     </section>
   </main>
   @if (modal()) {
-    <div class="modal-bg" (click)="modal.set(false)">
+    <div class="modal-bg">
       <form (click)="$event.stopPropagation()" (submit)="$event.preventDefault();save()">
         <header><h2>{{draft.id?'Editar':'Nuevo'}} registro</h2><button type="button" (click)="modal.set(false)">×</button></header>
         @if(view()==='movimientos'){
-          <label>Descripción<input name="name" [(ngModel)]="draft.name" required></label><label>Monto<input name="amount" [(ngModel)]="draft.amount" required type="number" min="1"></label>
+          <label>Descripción<input name="name" [(ngModel)]="draft.name" required maxlength="120" placeholder="Ej. Compra de supermercado"></label><label>Monto<input name="amount" [(ngModel)]="draft.amount" required type="number" min="1" step="1" placeholder="Ej. 25000"></label>
           <label>Tipo<select name="type" [ngModel]="formType()" (ngModelChange)="formType.set($event);draft.categoryId=categoriesFor($event)[0]?.id"><option value="expense">Gasto</option><option value="income">Ingreso</option></select></label>
           <label>Categoría<select name="category" [(ngModel)]="draft.categoryId" required>@for(c of categoriesFor(formType());track c.id){<option [value]="c.id">{{c.name}}</option>}</select></label>
           <label>Método de pago<select name="payment" [(ngModel)]="draft.paymentMethod"><option>Efectivo</option><option>Débito</option><option>Crédito</option><option>Transferencia</option></select></label>
         }
         @if(view()==='presupuestos'){
-          <label>Categoría<select name="category" [(ngModel)]="draft.categoryId" required>@for(c of categoriesFor('expense');track c.id){<option [value]="c.id">{{c.name}}</option>}</select></label><label>Límite mensual<input name="limit" [(ngModel)]="draft.limit" required type="number" min="1"></label><label>Mes<input name="month" [(ngModel)]="draft.month" type="number" min="1" max="12"></label><label>Año<input name="year" [(ngModel)]="draft.year" type="number"></label>
+          <label>Categoría<select name="category" [(ngModel)]="draft.categoryId" required>@for(c of categoriesFor('expense');track c.id){<option [value]="c.id">{{c.name}}</option>}</select></label><label>Límite mensual<input name="limit" [(ngModel)]="draft.limit" required type="number" min="1" step="1" placeholder="Ej. 150000"></label><label>Mes<input name="month" [(ngModel)]="draft.month" type="number" min="1" max="12" step="1" placeholder="1 a 12"></label><label>Año<input name="year" [(ngModel)]="draft.year" type="number" min="2000" step="1" placeholder="Ej. 2026"></label>
         }
         @if(view()==='metas'){
-          <label>Nombre<input name="name" [(ngModel)]="draft.name" required></label><label>Monto objetivo<input name="target" [(ngModel)]="draft.targetAmount" required type="number" min="1"></label><label>Monto actual<input name="current" [(ngModel)]="draft.currentAmount" type="number" min="0"></label><label>Fecha objetivo<input name="date" [(ngModel)]="draft.targetDate" type="date" required></label><label>Descripción<input name="description" [(ngModel)]="draft.description"></label>
+          <label>Nombre<input name="name" [(ngModel)]="draft.name" required maxlength="100" placeholder="Ej. Fondo de emergencia"></label><label>Monto objetivo<input name="target" [(ngModel)]="draft.targetAmount" required type="number" min="1" step="1" placeholder="Ej. 1000000"></label><label>Monto actual<input name="current" [(ngModel)]="draft.currentAmount" type="number" min="0" step="1" placeholder="Ej. 250000"></label><label>Fecha objetivo<input name="date" [(ngModel)]="draft.targetDate" type="date" required></label><label>Descripción<input name="description" [(ngModel)]="draft.description" maxlength="250" placeholder="Describe el objetivo"></label>
         }
         @if(view()==='deudas'){
-          <label>Nombre<input name="name" [(ngModel)]="draft.name" required></label><label>Entidad<input name="entity" [(ngModel)]="draft.entity"></label><label>Monto total<input name="total" [(ngModel)]="draft.totalAmount" required type="number" min="1"></label><label>Monto pagado<input name="paid" [(ngModel)]="draft.paidAmount" type="number" min="0"></label><label>Vencimiento<input name="due" [(ngModel)]="draft.dueDate" type="date" required></label><label>Cuotas<input name="installments" [(ngModel)]="draft.installments" type="number" min="1"></label>
+          <label>Nombre<input name="name" [(ngModel)]="draft.name" required maxlength="100" placeholder="Ej. Crédito automotriz"></label><label>Entidad<input name="entity" [(ngModel)]="draft.entity" maxlength="100" placeholder="Ej. Banco"></label><label>Monto total<input name="total" [(ngModel)]="draft.totalAmount" required type="number" min="1" step="1" placeholder="Ej. 500000"></label><label>Monto pagado<input name="paid" [(ngModel)]="draft.paidAmount" type="number" min="0" [max]="draft.totalAmount" step="1" placeholder="Ej. 100000"></label><label>Vencimiento<input name="due" [(ngModel)]="draft.dueDate" type="date" required></label><label>Cuotas<input name="installments" [(ngModel)]="draft.installments" type="number" min="1" step="1" placeholder="Ej. 12"></label>
+        }
+        @if(view()==='usuarios'){
+          <label>Nombre<input name="userName" [(ngModel)]="draft.name" required maxlength="100" placeholder="Nombre completo"></label><label>Correo electrónico<input name="email" [(ngModel)]="draft.email" required type="email" placeholder="usuario@correo.cl"></label><label>Rol<select name="role" [(ngModel)]="draft.role"><option value="Admin">Administrador</option><option value="Visitor">Visita</option></select></label><label>Contraseña {{draft.id?'(opcional)':''}}<input name="password" [(ngModel)]="draft.password" type="password" [required]="!draft.id" minlength="8" placeholder="Mínimo 8 caracteres"></label>
         }
         @if(error()){<div class="form-error">{{error()}}</div>}<button class="primary" [disabled]="loading()">{{loading()?'Guardando...':'Guardar'}}</button>
       </form>
