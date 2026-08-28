@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cashboard
+      POSTGRES_USER: cashboard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_demo_only}
+    ports: ["5432:5432"]
+    volumes: [cashboard_data:/var/lib/postgresql/data]
+  api:
+    build: ./backend/CashBoard.Api
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=cashboard;Username=cashboard;Password=${POSTGRES_PASSWORD:-local_demo_only}
+      Jwt__Key: ${JWT_KEY:-DevelopmentOnlyKey-ReplaceBeforeProduction-123456789}
+    ports: ["8080:8080"]
+    depends_on: [postgres]
+volumes:
+  cashboard_data:

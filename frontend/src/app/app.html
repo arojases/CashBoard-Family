@@ -1,0 +1,322 @@
+<div class="app" [class.dark]="dark()">
+  <aside [class.open]="menu()">
+    <div class="brand">
+      <b>C</b><span>CashBoard<small>FAMILY</small></span
+      ><button (click)="menu.set(false)">×</button>
+    </div>
+    <div class="family">
+      <i>FR</i><span><strong>Familia Rojas</strong><small>Plan familiar</small></span
+      >⌄
+    </div>
+    <nav>
+      <label>MENÚ PRINCIPAL</label>
+      @for (n of nav; track n[0]) {
+        <button [class.active]="view() === n[0]" (click)="select(n[0])">
+          <i>{{ n[2] }}</i
+          >{{ n[1] }}
+          @if (n[0] === 'deudas') {
+            <em>3</em>
+          }
+        </button>
+      }
+    </nav>
+    <footer>
+      <button>⚙ Configuración</button><button>? Ayuda y soporte</button>
+      <div class="profile">
+        <i>AR</i><span><strong>Ariel Rojas</strong><small>Administrador</small></span
+        >⋮
+      </div>
+    </footer>
+  </aside>
+  @if (menu()) {
+    <div class="overlay" (click)="menu.set(false)"></div>
+  }
+  <main>
+    <header>
+      <button class="hamb" (click)="menu.set(true)">☰</button>
+      <div class="search">
+        ⌕<input
+          placeholder="Buscar movimientos, metas..."
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+        /><kbd>⌘ K</kbd>
+      </div>
+      <div>
+        <button (click)="dark.set(!dark())">{{ dark() ? '☀' : '☾' }}</button><button>♢</button
+        ><i class="avatar">AR</i>
+      </div>
+    </header>
+    <section>
+      @if (view() === 'dashboard') {
+        <div class="welcome">
+          <div>
+            <label>VIERNES, 28 DE AGOSTO</label>
+            <h1>Buenos días, Ariel 👋</h1>
+            <small>Aquí tienes el resumen financiero de tu familia.</small>
+          </div>
+          <button class="primary" (click)="modal.set(true)">＋ Nuevo movimiento</button>
+        </div>
+        <div class="metrics">
+          @for (
+            m of [
+              ['↙', 'Ingresos del mes', '$2.480.000', '↗ 8,4%', 'mint'],
+              ['↗', 'Gastos del mes', '$1.326.450', '↘ 3,2%', 'peach'],
+              ['◈', 'Balance disponible', '$1.153.550', '↗ 24,7%', 'blue'],
+              ['◎', 'Total ahorrado', '$3.840.000', '3 metas', 'purple'],
+            ];
+            track m[1]
+          ) {
+            <article>
+              <div>
+                <i [class]="m[4]">{{ m[0] }}</i
+                ><em>{{ m[3] }}</em>
+              </div>
+              <label>{{ m[1] }}</label>
+              <h2>{{ m[2] }}</h2>
+              <small>Comparado con el mes anterior</small>
+            </article>
+          }
+        </div>
+        <div class="charts">
+          <article>
+            <div class="title">
+              <span
+                ><h3>Flujo de dinero</h3>
+                <small>Ingresos y gastos de los últimos 6 meses</small></span
+              ><select>
+                <option>Últimos 6 meses</option>
+              </select>
+            </div>
+            <div class="legend"><i></i>Ingresos <i></i>Gastos</div>
+            <svg viewBox="0 0 700 210" preserveAspectRatio="none">
+              <path class="grid" d="M0 30H700M0 85H700M0 140H700M0 195H700" />
+              <path
+                class="income"
+                d="M0 115 C70 65 95 100 140 80 S230 115 280 78 S360 48 420 58 S510 85 560 55 S650 35 700 42"
+              />
+              <path
+                class="expense"
+                d="M0 160 C75 145 100 165 145 142 S235 152 280 132 S370 148 420 118 S510 140 560 122 S650 152 700 135"
+              />
+            </svg>
+            <div class="months">
+              <span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span
+              ><span>Ago</span>
+            </div>
+          </article>
+          <article>
+            <div class="title">
+              <span
+                ><h3>Gastos por categoría</h3>
+                <small>Distribución de agosto</small></span
+              >•••
+            </div>
+            <div class="donut-row">
+              <div class="donut">
+                <span><b>$1,32M</b><small>Total gastos</small></span>
+              </div>
+              <div class="cats">
+                <span>● Vivienda <b>32%</b></span
+                ><span>● Alimentación <b>24%</b></span
+                ><span>● Transporte <b>16%</b></span
+                ><span>● Servicios <b>14%</b></span
+                ><span>● Otros <b>14%</b></span>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="bottom">
+          <article>
+            <div class="title">
+              <span
+                ><h3>Últimos movimientos</h3>
+                <small>Actividad reciente de la familia</small></span
+              ><button (click)="select('movimientos')">Ver todos →</button>
+            </div>
+            @for (t of txs().slice(0, 4); track t.name) {
+              <div class="tx">
+                <i [class]="t.color">{{ t.icon }}</i
+                ><span
+                  ><strong>{{ t.name }}</strong
+                  ><small>{{ t.category }} · {{ t.date }}</small></span
+                ><b [class.positive]="t.amount > 0"
+                  >{{ t.amount > 0 ? '+' : '−' }}{{ money(t.amount) }}</b
+                >
+              </div>
+            }
+          </article>
+          <article>
+            <div class="title">
+              <span
+                ><h3>Presupuestos</h3>
+                <small>Uso durante agosto</small></span
+              ><button (click)="select('presupuestos')">Ver detalle →</button>
+            </div>
+            @for (
+              b of [
+                ['Alimentación', '$180.000 / $250.000', '72', 'ok'],
+                ['Transporte', '$63.200 / $80.000', '79', 'warn'],
+                ['Ocio', '$67.500 / $60.000', '100', 'danger'],
+              ];
+              track b[0]
+            ) {
+              <div class="budget">
+                <span
+                  ><strong>{{ b[0] }}</strong
+                  ><small>{{ b[1] }}</small></span
+                >
+                <div><i [class]="b[3]" [style.width.%]="b[2]"></i></div>
+                <small>{{ b[2] }}% usado</small>
+              </div>
+            }
+          </article>
+        </div>
+      } @else {
+        <div class="welcome">
+          <div>
+            <label>GESTIÓN FINANCIERA</label>
+            <h1>
+              {{
+                view() === 'movimientos'
+                  ? 'Movimientos'
+                  : view() === 'presupuestos'
+                    ? 'Presupuestos'
+                    : view() === 'metas'
+                      ? 'Metas de ahorro'
+                      : view() === 'deudas'
+                        ? 'Deudas y pagos'
+                        : 'Reportes'
+              }}
+            </h1>
+            <small>Mantén las finanzas de tu familia bajo control.</small>
+          </div>
+          <button class="primary" (click)="modal.set(true)">＋ Agregar</button>
+        </div>
+        @if (view() === 'movimientos') {
+          <div class="filters">
+            <div class="search">
+              ⌕<input
+                placeholder="Buscar..."
+                [ngModel]="query()"
+                (ngModelChange)="query.set($event)"
+              />
+            </div>
+            @for (f of ['Todos', 'Ingresos', 'Gastos']; track f) {
+              <button [class.active]="type() === f" (click)="type.set(f)">{{ f }}</button>
+            }
+          </div>
+          <article class="table">
+            <div class="thead">
+              <span>Movimiento</span><span>Categoría</span><span>Fecha</span><span>Monto</span>
+            </div>
+            @for (t of filtered(); track t.name) {
+              <div class="trow">
+                <span
+                  ><i [class]="t.color">{{ t.icon }}</i
+                  ><strong>{{ t.name }}</strong></span
+                ><span>{{ t.category }}</span
+                ><span>{{ t.date }}</span
+                ><b [class.positive]="t.amount > 0"
+                  >{{ t.amount > 0 ? '+' : '−' }}{{ money(t.amount) }}</b
+                >
+              </div>
+            }
+          </article>
+        }
+        @if (view() === 'presupuestos') {
+          <div class="cards">
+            @for (
+              x of [
+                ['Alimentación', '$180.000', '$250.000', '72'],
+                ['Transporte', '$63.200', '$80.000', '79'],
+                ['Ocio', '$67.500', '$60.000', '100'],
+                ['Servicios', '$94.500', '$150.000', '63'],
+              ];
+              track x[0]
+            ) {
+              <article>
+                <i class="blue">▣</i>
+                <h3>{{ x[0] }}</h3>
+                <h2>{{ x[1] }}</h2>
+                <small>de {{ x[2] }}</small>
+                <div class="bar"><i [style.width.%]="x[3]"></i></div>
+                <b>{{ x[3] }}% utilizado</b>
+              </article>
+            }
+          </div>
+        }
+        @if (view() === 'metas') {
+          <div class="cards">
+            @for (
+              x of [
+                ['🏠', 'Fondo de emergencia', '$2.400.000', '$4.000.000', '60'],
+                ['✈', 'Vacaciones familiares', '$980.000', '$2.000.000', '49'],
+                ['💻', 'Notebook nuevo', '$460.000', '$1.000.000', '46'],
+              ];
+              track x[1]
+            ) {
+              <article>
+                <i>{{ x[0] }}</i>
+                <h3>{{ x[1] }}</h3>
+                <h2>{{ x[2] }}</h2>
+                <small>Objetivo: {{ x[3] }}</small>
+                <div class="bar"><i [style.width.%]="x[4]"></i></div>
+                <b>{{ x[4] }}% completado</b>
+              </article>
+            }
+          </div>
+        }
+        @if (view() === 'deudas') {
+          <div class="cards">
+            @for (
+              x of [
+                ['Tarjeta de crédito', '$420.000', '$850.000', '49'],
+                ['Crédito automotriz', '$4.280.000', '$8.400.000', '51'],
+                ['Compra en cuotas', '$120.000', '$360.000', '33'],
+              ];
+              track x[0]
+            ) {
+              <article>
+                <i class="peach">▤</i>
+                <h3>{{ x[0] }}</h3>
+                <h2>{{ x[1] }}</h2>
+                <small>pendiente de {{ x[2] }}</small>
+                <div class="bar orange"><i [style.width.%]="x[3]"></i></div>
+                <b>{{ x[3] }}% pagado</b>
+              </article>
+            }
+          </div>
+        }
+        @if (view() === 'reportes') {
+          <article class="report">
+            <i>◫</i>
+            <h2>Tu salud financiera va mejorando</h2>
+            <p>Este mes gastaste un 3,2% menos y ahorraste un 24,7% más que en julio.</p>
+            <button class="primary">Exportar reporte</button>
+          </article>
+        }
+      }
+    </section>
+  </main>
+  @if (modal()) {
+    <div class="modal-bg" (click)="modal.set(false)">
+      <form
+        (click)="$event.stopPropagation()"
+        (submit)="$event.preventDefault(); add(n.value, a.value, k.value)"
+      >
+        <header>
+          <h2>Nuevo movimiento</h2>
+          <button type="button" (click)="modal.set(false)">×</button>
+        </header>
+        <label>Descripción<input #n required placeholder="Ej. Compra supermercado" /></label
+        ><label>Monto<input #a required type="number" placeholder="$ 0" /></label
+        ><label
+          >Tipo<select #k>
+            <option value="expense">Gasto</option>
+            <option value="income">Ingreso</option>
+          </select></label
+        ><button class="primary">Guardar movimiento</button>
+      </form>
+    </div>
+  }
+</div>
