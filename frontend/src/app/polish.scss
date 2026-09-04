@@ -1,0 +1,164 @@
+.app {
+  background: radial-gradient(circle at 88% 4%, #ebe9ff 0, transparent 24%), #f5f6fa;
+}
+
+.brand small,
+.family small,
+.profile small {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+article,
+.filters {
+  transition: border-color .2s, box-shadow .2s;
+}
+
+article:hover {
+  border-color: #dedfeb;
+  box-shadow: 0 8px 24px #2e31500a;
+}
+
+.family.editable {
+  cursor: pointer;
+  transition: border-color .18s, background .18s;
+}
+
+.family.editable:hover {
+  background: #363643;
+  border-color: #555666;
+}
+
+.family-name-editor {
+  margin: -17px 0 20px;
+  padding: 11px;
+  background: #30303b;
+  border: 1px solid #41424e;
+  border-radius: 10px;
+}
+
+.family-name-editor input {
+  width: 100%;
+  border: 1px solid #4b4c59;
+  background: #252530;
+  color: #fff;
+  border-radius: 7px;
+  padding: 9px;
+  font-size: 11px;
+  outline: none;
+}
+
+.family-name-editor input:focus {
+  border-color: #8c83ee;
+  box-shadow: 0 0 0 3px #655bd629;
+}
+
+.family-name-editor > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.family-name-editor button {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #41424e;
+  color: #ddd;
+  font-size: 9px;
+}
+
+.family-name-editor .save {
+  background: #655bd6;
+  color: #fff;
+}
+
+/* Tema oscuro integral */
+.app.dark {
+  background: radial-gradient(circle at 88% 4%, #29263f 0, transparent 27%), #14151c;
+  color: #f2f2f6;
+}
+
+.dark main,
+.dark main section,
+.dark .modal-bg {
+  color: #f2f2f6;
+}
+
+.dark main > header,
+.dark article,
+.dark .filters,
+.dark .table,
+.dark .modal-bg form,
+.dark .empty-state {
+  background: #22232d !important;
+  border-color: #393b49 !important;
+  color: #f2f2f6 !important;
+}
+
+.dark .thead {
+  background: #292a35;
+  color: #c4c6d0;
+}
+
+.dark .trow,
+.dark .tx,
+.dark .profile {
+  border-color: #393b49;
+}
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark strong,
+.dark .trow span,
+.dark .budget span,
+.dark .cats b,
+.dark .report p,
+.dark .modal-bg header button {
+  color: #f2f2f6;
+}
+
+.dark p,
+.dark small,
+.dark label,
+.dark .months,
+.dark .legend,
+.dark .cats {
+  color: #b8bac5 !important;
+}
+
+.dark input,
+.dark select,
+.dark option,
+.dark textarea,
+.dark .search,
+.dark .search kbd {
+  background: #191a22 !important;
+  border-color: #444653 !important;
+  color: #f4f4f7 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #858894;
+}
+
+.dark .bar,
+.dark .budget > div {
+  background: #343642;
+}
+
+.dark .grid {
+  stroke: #373946;
+}
+
+.dark .donut::after {
+  background: #22232d;
+}
+
+.dark .readonly-badge,
+.dark .role-pill {
+  background: #393553;
+  color: #c8c2ff;
+}

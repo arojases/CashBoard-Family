@@ -1,7 +1,7 @@
 namespace CashBoard.Api.Models;
-public enum TransactionType{Income,Expense} public enum FamilyRole{Admin,Visitor}
+public enum TransactionType{Income,Expense} public enum FamilyRole{Admin,Family}
 public class Family{public Guid Id{get;set;}=Guid.NewGuid();public string Name{get;set;}="";public string Currency{get;set;}="CLP";public List<User> Users{get;set;}=[];}
-public class User{public Guid Id{get;set;}=Guid.NewGuid();public Guid FamilyId{get;set;}public Family? Family{get;set;}public string Name{get;set;}="";public string Email{get;set;}="";public string PasswordHash{get;set;}="";public FamilyRole Role{get;set;}=FamilyRole.Visitor;}
+public class User{public Guid Id{get;set;}=Guid.NewGuid();public Guid FamilyId{get;set;}public Family? Family{get;set;}public string Name{get;set;}="";public string Email{get;set;}="";public string PasswordHash{get;set;}="";public FamilyRole Role{get;set;}=FamilyRole.Family;}
 public class Category{public Guid Id{get;set;}=Guid.NewGuid();public Guid FamilyId{get;set;}public string Name{get;set;}="";public string Color{get;set;}="#655BD6";public TransactionType Type{get;set;}}
 public class Transaction{public Guid Id{get;set;}=Guid.NewGuid();public Guid FamilyId{get;set;}public Guid UserId{get;set;}public Guid CategoryId{get;set;}public TransactionType Type{get;set;}public decimal Amount{get;set;}public DateTime Date{get;set;}=DateTime.UtcNow;public string Description{get;set;}="";public string PaymentMethod{get;set;}="Transferencia";public User? User{get;set;}public Category? Category{get;set;}}
 public class Budget{public Guid Id{get;set;}=Guid.NewGuid();public Guid FamilyId{get;set;}public Guid? CategoryId{get;set;}public int Year{get;set;}public int Month{get;set;}public decimal Limit{get;set;}public Category? Category{get;set;}}

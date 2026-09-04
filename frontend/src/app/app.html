@@ -1,7 +1,7 @@
 @if (!api.authenticated()) {
   <div class="login-page">
     <section class="login-copy"><div class="login-logo">C</div><h1>Tu familia, tus metas,<br><span>un solo lugar.</span></h1><p>Organiza las finanzas del hogar con claridad y toma mejores decisiones en familia.</p><div class="login-preview"><b>Control financiero</b><strong>Datos reales</strong><small>Sin información precargada</small></div></section>
-    <section class="login-panel"><form (submit)="$event.preventDefault(); login(email.value, password.value)"><div class="mobile-logo">C</div><label class="eyebrow">BIENVENIDO</label><h2>Inicia sesión</h2><p>Accede a tu panel financiero familiar.</p><label>Correo electrónico<input #email type="email" required autocomplete="email"></label><label>Contraseña<input #password type="password" required autocomplete="current-password"></label>@if(error()){<div class="form-error">{{error()}}</div>}<button class="primary" [disabled]="loading()">{{loading()?'Conectando...':'Ingresar a CashBoard'}}</button><small class="demo-hint">Usa una de las cuentas de prueba Admin o Visita</small></form></section>
+    <section class="login-panel"><form (submit)="$event.preventDefault(); login(email.value, password.value)"><div class="mobile-logo">C</div><label class="eyebrow">BIENVENIDO</label><h2>Inicia sesión</h2><p>Accede a tu panel financiero familiar.</p><label>Correo electrónico<input #email type="email" required autocomplete="email"></label><label>Contraseña<input #password type="password" required autocomplete="current-password"></label>@if(error()){<div class="form-error">{{error()}}</div>}<button class="primary" [disabled]="loading()">{{loading()?'Conectando...':'Ingresar a CashBoard'}}</button><small class="demo-hint">Usa una de las cuentas de prueba Admin o Familia</small></form></section>
   </div>
 } @else {
 <div class="app" [class.dark]="dark()">
@@ -10,19 +10,22 @@
       <b>C</b><span>CashBoard<small>FAMILY</small></span
       ><button (click)="menu.set(false)">×</button>
     </div>
-    <div class="family">
+    <div class="family" [class.editable]="isAdmin()" (click)="isAdmin() && editingFamilyName.set(!editingFamilyName())" title="Cambiar nombre del plan">
       <i>MF</i><span><strong>{{familyName()}}</strong><small>Plan familiar</small></span
-      >⌄
+      >{{isAdmin()?'✎':''}}
     </div>
+    @if(editingFamilyName() && isAdmin()){
+      <form class="family-name-editor" (click)="$event.stopPropagation()" (submit)="$event.preventDefault();updateFamilyName(sidePlanName.value)">
+        <input #sidePlanName required minlength="2" maxlength="50" [value]="familyName()" placeholder="Ej. Los Avengers del Ahorro">
+        <div><button type="button" (click)="editingFamilyName.set(false)">Cancelar</button><button class="save" type="submit">Guardar</button></div>
+      </form>
+    }
     <nav>
       <label>MENÚ PRINCIPAL</label>
       @for (n of nav; track n[0]) {
         <button [class.active]="view() === n[0]" (click)="select(n[0])">
           <i>{{ n[2] }}</i
           >{{ n[1] }}
-          @if (n[0] === 'deudas') {
-            <em>3</em>
-          }
         </button>
       }
     </nav>
@@ -30,7 +33,7 @@
       <button (click)="dark.set(!dark())"><i>{{dark()?'☀':'☾'}}</i>{{dark()?'Modo claro':'Modo nocturno'}}</button>
       @if(isAdmin()){<button (click)="select('usuarios')"><i>⚙</i>Configuración</button>}
       <div class="profile" (click)="profileMenu.set(!profileMenu())">
-        <i>{{api.user()?.name?.slice(0,2)}}</i><span><strong>{{api.user()?.name}}</strong><small>{{isAdmin()?'Administrador':'Visita'}}</small></span
+        <i>{{api.user()?.name?.slice(0,2)}}</i><span><strong>{{api.user()?.name}}</strong><small>{{isAdmin()?'Administrador':'Familia'}}</small></span
         >⌄
       </div>
       @if(profileMenu()){<div class="profile-dropdown"><button (click)="api.logout()">⇥ Cerrar sesión</button></div>}
@@ -202,9 +205,8 @@
           </div>
         }
         @if(view()==='usuarios' && isAdmin()){
-          <article class="family-settings"><div><h3>Nombre del plan familiar</h3><small>Puede ser formal, divertido o como tu familia prefiera.</small></div><form (submit)="$event.preventDefault();updateFamilyName(planName.value)"><input #planName required minlength="2" maxlength="50" [value]="familyName()" placeholder="Ej. Los Avengers del Ahorro"><button class="primary">Guardar nombre</button></form></article>
           <article class="table users-table"><div class="thead"><span>Usuario</span><span>Correo</span><span>Rol</span><span>Acciones</span></div>
-          @for(u of users();track u.id){<div class="trow"><span><i class="blue">{{u.name.slice(0,2).toUpperCase()}}</i><strong>{{u.name}}</strong></span><span>{{u.email}}</span><span><b class="role-pill">{{u.role==='Admin'?'Administrador':'Visita'}}</b></span><span class="row-actions"><button class="icon-action edit" title="Editar" (click)="openForm(u)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg></button><button class="icon-action delete" title="Eliminar" (click)="remove('users',u.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></span></div>} @empty {<div class="empty-state">No hay usuarios.</div>}
+          @for(u of users();track u.id){<div class="trow"><span><i class="blue">{{u.name.slice(0,2).toUpperCase()}}</i><strong>{{u.name}}</strong></span><span>{{u.email}}</span><span><b class="role-pill">{{u.role==='Admin'?'Administrador':'Familia'}}</b></span><span class="row-actions"><button class="icon-action edit" title="Editar" (click)="openForm(u)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l11-11-4-4L4 16v4ZM14 6l4 4"/></svg></button><button class="icon-action delete" title="Eliminar" (click)="remove('users',u.id)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button></span></div>} @empty {<div class="empty-state">No hay usuarios.</div>}
           </article>
         }
         @if (view() === 'reportes') {
@@ -225,7 +227,6 @@
           <label>Descripción<input name="name" [(ngModel)]="draft.name" required maxlength="120" placeholder="Ej. Compra de supermercado"></label><label>Monto<input name="amount" [(ngModel)]="draft.amount" required type="number" min="1" step="1" placeholder="Ej. 25000"></label>
           <label>Tipo<select name="type" [ngModel]="formType()" (ngModelChange)="formType.set($event);draft.categoryId=categoriesFor($event)[0]?.id"><option value="expense">Gasto</option><option value="income">Ingreso</option></select></label>
           <label>Categoría<select name="category" [(ngModel)]="draft.categoryId" required>@for(c of categoriesFor(formType());track c.id){<option [value]="c.id">{{c.name}}</option>}</select></label>
-          <label>Método de pago<select name="payment" [(ngModel)]="draft.paymentMethod"><option>Efectivo</option><option>Débito</option><option>Crédito</option><option>Transferencia</option></select></label>
         }
         @if(view()==='presupuestos'){
           <label>Categoría<select name="category" [(ngModel)]="draft.categoryId" required>@for(c of categoriesFor('expense');track c.id){<option [value]="c.id">{{c.name}}</option>}</select></label><label>Límite mensual<input name="limit" [(ngModel)]="draft.limit" required type="number" min="1" step="1" placeholder="Ej. 150000"></label><label>Mes<input name="month" [(ngModel)]="draft.month" type="number" min="1" max="12" step="1" placeholder="1 a 12"></label><label>Año<input name="year" [(ngModel)]="draft.year" type="number" min="2000" step="1" placeholder="Ej. 2026"></label>
@@ -237,7 +238,7 @@
           <label>Nombre<input name="name" [(ngModel)]="draft.name" required maxlength="100" placeholder="Ej. Crédito automotriz"></label><label>Entidad<input name="entity" [(ngModel)]="draft.entity" maxlength="100" placeholder="Ej. Banco"></label><label>Monto total<input name="total" [(ngModel)]="draft.totalAmount" required type="number" min="1" step="1" placeholder="Ej. 500000"></label><label>Monto pagado<input name="paid" [(ngModel)]="draft.paidAmount" type="number" min="0" [max]="draft.totalAmount" step="1" placeholder="Ej. 100000"></label><label>Vencimiento<input name="due" [(ngModel)]="draft.dueDate" type="date" required></label><label>Cuotas<input name="installments" [(ngModel)]="draft.installments" type="number" min="1" step="1" placeholder="Ej. 12"></label>
         }
         @if(view()==='usuarios'){
-          <label>Nombre<input name="userName" [(ngModel)]="draft.name" required maxlength="100" placeholder="Nombre completo"></label><label>Correo electrónico<input name="email" [(ngModel)]="draft.email" required type="email" placeholder="usuario@correo.cl"></label><label>Rol<select name="role" [(ngModel)]="draft.role"><option value="Admin">Administrador</option><option value="Visitor">Visita</option></select></label><label>Contraseña {{draft.id?'(opcional)':''}}<input name="password" [(ngModel)]="draft.password" type="password" [required]="!draft.id" minlength="8" placeholder="Mínimo 8 caracteres"></label>
+          <label>Nombre<input name="userName" [(ngModel)]="draft.name" required maxlength="100" placeholder="Nombre completo"></label><label>Correo electrónico<input name="email" [(ngModel)]="draft.email" required type="email" placeholder="usuario@correo.cl"></label><label>Rol<select name="role" [(ngModel)]="draft.role"><option value="Admin">Administrador</option><option value="Family">Familia</option></select></label><label>Contraseña {{draft.id?'(opcional)':''}}<input name="password" [(ngModel)]="draft.password" type="password" [required]="!draft.id" minlength="8" placeholder="Mínimo 8 caracteres"></label>
         }
         @if(error()){<div class="form-error">{{error()}}</div>}<button class="primary" [disabled]="loading()">{{loading()?'Guardando...':'Guardar'}}</button>
       </form>

@@ -97,7 +97,7 @@ secured.MapGet("/dashboard/summary", async (ClaimsPrincipal principal, AppDbCont
 secured.MapGet("/transactions", async (ClaimsPrincipal principal, AppDbContext db) =>
     await db.Transactions.AsNoTracking().Where(x => x.FamilyId == principal.FamilyId())
         .Include(x => x.Category).OrderByDescending(x => x.Date)
-        .Select(x => new TransactionResponse(x.Id, x.Description, x.CategoryId, x.Category!.Name, x.Date, x.Amount, x.Type == TransactionType.Income ? "income" : "expense", x.PaymentMethod))
+        .Select(x => new TransactionResponse(x.Id, x.Description, x.CategoryId, x.Category!.Name, x.Date, x.Amount, x.Type == TransactionType.Income ? "income" : "expense"))
         .ToListAsync());
 
 secured.MapPost("/transactions", async (CreateTransactionRequest request, ClaimsPrincipal principal, AppDbContext db) =>
@@ -113,11 +113,11 @@ secured.MapPost("/transactions", async (CreateTransactionRequest request, Claims
     {
         FamilyId = familyId, UserId = principal.UserId(), CategoryId = category.Id,
         Type = requestedType,
-        Amount = request.Amount, Description = request.Description.Trim(), PaymentMethod = request.PaymentMethod,
+        Amount = request.Amount, Description = request.Description.Trim(), PaymentMethod = "",
         Date = request.Date?.ToUniversalTime() ?? DateTime.UtcNow
     };
     db.Transactions.Add(transaction); await db.SaveChangesAsync();
-    return Results.Created($"/api/transactions/{transaction.Id}", new TransactionResponse(transaction.Id, transaction.Description, category.Id, category.Name, transaction.Date, transaction.Amount, transaction.Type == TransactionType.Income ? "income" : "expense", transaction.PaymentMethod));
+    return Results.Created($"/api/transactions/{transaction.Id}", new TransactionResponse(transaction.Id, transaction.Description, category.Id, category.Name, transaction.Date, transaction.Amount, transaction.Type == TransactionType.Income ? "income" : "expense"));
 }).RequireAuthorization("AdminOnly");
 
 secured.MapPut("/transactions/{id:guid}", async (Guid id, CreateTransactionRequest request, ClaimsPrincipal principal, AppDbContext db) =>
@@ -127,7 +127,7 @@ secured.MapPut("/transactions/{id:guid}", async (Guid id, CreateTransactionReque
     if(item is null||category is null) return Results.NotFound();
     var type=request.Type.Equals("income",StringComparison.OrdinalIgnoreCase)?TransactionType.Income:TransactionType.Expense;
     if(request.Amount<=0||category.Type!=type) return Results.BadRequest(new{message="Datos de movimiento inválidos."});
-    item.Description=request.Description.Trim();item.Amount=request.Amount;item.Type=type;item.CategoryId=category.Id;item.PaymentMethod=request.PaymentMethod;item.Date=request.Date?.ToUniversalTime()??item.Date;
+    item.Description=request.Description.Trim();item.Amount=request.Amount;item.Type=type;item.CategoryId=category.Id;item.PaymentMethod="";item.Date=request.Date?.ToUniversalTime()??item.Date;
     await db.SaveChangesAsync();return Results.NoContent();
 }).RequireAuthorization("AdminOnly");
 
@@ -140,8 +140,31 @@ secured.MapDelete("/transactions/{id:guid}", async (Guid id, ClaimsPrincipal pri
 }).RequireAuthorization("AdminOnly");
 
 secured.MapGet("/categories", async (ClaimsPrincipal principal, AppDbContext db) =>
-    await db.Categories.AsNoTracking().Where(x => x.FamilyId == principal.FamilyId()).OrderBy(x => x.Name)
-        .Select(x => new { x.Id, x.Name, type = x.Type == TransactionType.Income ? "income" : "expense", x.Color }).ToListAsync());
+{
+    var familyId = principal.FamilyId();
+    var desired = new[]
+    {
+        (Name: "Alimentación", Type: TransactionType.Expense, Color: "#EC826D"),
+        (Name: "Ahorro", Type: TransactionType.Expense, Color: "#42B596"),
+        (Name: "Otros", Type: TransactionType.Expense, Color: "#8D909D"),
+        (Name: "Servicios", Type: TransactionType.Expense, Color: "#E4B548"),
+        (Name: "Sueldo", Type: TransactionType.Income, Color: "#42B596"),
+        (Name: "Transporte", Type: TransactionType.Expense, Color: "#7964D1")
+    };
+    var categories = await db.Categories.Where(x => x.FamilyId == familyId).ToListAsync();
+    foreach (var item in desired.Where(item => categories.All(x => x.Name != item.Name)))
+    {
+        var category = new Category { FamilyId = familyId, Name = item.Name, Type = item.Type, Color = item.Color };
+        db.Categories.Add(category);
+        categories.Add(category);
+    }
+    await db.SaveChangesAsync();
+    var names = desired.Select(x => x.Name).ToHashSet();
+    return Results.Ok(categories.Where(x => names.Contains(x.Name)).OrderBy(x => x.Name).Select(x => new
+    {
+        x.Id, x.Name, type = x.Type == TransactionType.Income ? "income" : "expense", x.Color
+    }));
+});
 
 secured.MapPost("/categories", async(CategoryRequest r,ClaimsPrincipal p,AppDbContext db)=>{if(string.IsNullOrWhiteSpace(r.Name))return Results.BadRequest();var x=new Category{FamilyId=p.FamilyId(),Name=r.Name.Trim(),Color=r.Color,Type=r.Type=="income"?TransactionType.Income:TransactionType.Expense};db.Add(x);await db.SaveChangesAsync();return Results.Ok(x);}).RequireAuthorization("AdminOnly");
 secured.MapPut("/categories/{id:guid}", async(Guid id,CategoryRequest r,ClaimsPrincipal p,AppDbContext db)=>{var x=await db.Categories.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();x.Name=r.Name.Trim();x.Color=r.Color;x.Type=r.Type=="income"?TransactionType.Income:TransactionType.Expense;await db.SaveChangesAsync();return Results.NoContent();}).RequireAuthorization("AdminOnly");
@@ -168,7 +191,7 @@ secured.MapPost("/users", async(UserRequest r,ClaimsPrincipal p,AppDbContext db)
     var email=r.Email.Trim().ToLowerInvariant();
     if(string.IsNullOrWhiteSpace(r.Name)||!email.Contains('@')||string.IsNullOrWhiteSpace(r.Password)||r.Password.Length<8)return Results.BadRequest(new{message="Nombre, correo y contraseña de al menos 8 caracteres son obligatorios."});
     if(await db.Users.AnyAsync(x=>x.Email==email))return Results.Conflict(new{message="Ese correo ya está registrado."});
-    var role=r.Role.Equals("Admin",StringComparison.OrdinalIgnoreCase)?FamilyRole.Admin:FamilyRole.Visitor;
+    var role=r.Role.Equals("Admin",StringComparison.OrdinalIgnoreCase)?FamilyRole.Admin:FamilyRole.Family;
     var x=new User{FamilyId=p.FamilyId(),Name=r.Name.Trim(),Email=email,PasswordHash=BCrypt.Net.BCrypt.HashPassword(r.Password),Role=role};db.Add(x);await db.SaveChangesAsync();return Results.Ok(new UserResponse(x.Id,x.Name,x.Email,x.Role.ToString()));
 }).RequireAuthorization("AdminOnly");
 secured.MapPut("/users/{id:guid}", async(Guid id,UserRequest r,ClaimsPrincipal p,AppDbContext db)=>
@@ -176,7 +199,7 @@ secured.MapPut("/users/{id:guid}", async(Guid id,UserRequest r,ClaimsPrincipal p
     var x=await db.Users.FirstOrDefaultAsync(x=>x.Id==id&&x.FamilyId==p.FamilyId());if(x is null)return Results.NotFound();var email=r.Email.Trim().ToLowerInvariant();
     if(string.IsNullOrWhiteSpace(r.Name)||!email.Contains('@')||(r.Password?.Length>0&&r.Password.Length<8))return Results.BadRequest(new{message="Datos de usuario inválidos."});
     if(await db.Users.AnyAsync(u=>u.Email==email&&u.Id!=id))return Results.Conflict(new{message="Ese correo ya está registrado."});
-    var newRole=r.Role.Equals("Admin",StringComparison.OrdinalIgnoreCase)?FamilyRole.Admin:FamilyRole.Visitor;
+    var newRole=r.Role.Equals("Admin",StringComparison.OrdinalIgnoreCase)?FamilyRole.Admin:FamilyRole.Family;
     if(x.Role==FamilyRole.Admin&&newRole!=FamilyRole.Admin&&await db.Users.CountAsync(u=>u.FamilyId==p.FamilyId()&&u.Role==FamilyRole.Admin)==1)return Results.Conflict(new{message="Debe existir al menos un administrador."});
     x.Name=r.Name.Trim();x.Email=email;x.Role=newRole;if(!string.IsNullOrWhiteSpace(r.Password))x.PasswordHash=BCrypt.Net.BCrypt.HashPassword(r.Password);await db.SaveChangesAsync();return Results.NoContent();
 }).RequireAuthorization("AdminOnly");
@@ -197,8 +220,8 @@ static async Task<IResult> DeleteOwned<T>(AppDbContext db,DbSet<T> set,Guid id,G
 }
 
 record LoginRequest(string Email, string Password);
-record CreateTransactionRequest(string Description, decimal Amount, string Type, Guid CategoryId, string PaymentMethod, DateTime? Date);
-record TransactionResponse(Guid Id, string Name, Guid CategoryId, string Category, DateTime Date, decimal Amount, string Type, string PaymentMethod);
+record CreateTransactionRequest(string Description, decimal Amount, string Type, Guid CategoryId, DateTime? Date);
+record TransactionResponse(Guid Id, string Name, Guid CategoryId, string Category, DateTime Date, decimal Amount, string Type);
 record CategoryRequest(string Name,string Type,string Color);
 record BudgetRequest(Guid? CategoryId,decimal Limit,int Month,int Year);
 record GoalRequest(string Name,decimal TargetAmount,decimal CurrentAmount,DateTime TargetDate,string Description);

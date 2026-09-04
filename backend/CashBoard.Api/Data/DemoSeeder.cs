@@ -18,8 +18,8 @@ public static class DemoSeeder
             db.Families.Add(family); await db.SaveChangesAsync();
         }
 
-        var visitorExists = await db.Users.AnyAsync(x => x.Role == FamilyRole.Visitor);
-        if (!visitorExists)
+        var familyUserExists = await db.Users.AnyAsync(x => x.Role == FamilyRole.Family);
+        if (!familyUserExists)
         {
             // Migración única desde la antigua demo: elimina solo registros financieros ficticios.
             db.Transactions.RemoveRange(db.Transactions);
@@ -38,16 +38,21 @@ public static class DemoSeeder
             admin.PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin1234!");
         }
 
-        if (!visitorExists)
-            db.Users.Add(new User { FamilyId = family.Id, Name = "Visita", Email = "visita@cashboard.cl", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Visita1234!"), Role = FamilyRole.Visitor });
+        if (!familyUserExists)
+            db.Users.Add(new User { FamilyId = family.Id, Name = "Familia", Email = "familia@cashboard.cl", PasswordHash = BCrypt.Net.BCrypt.HashPassword("Familia1234!"), Role = FamilyRole.Family });
 
-        if (!await db.Categories.AnyAsync(x => x.FamilyId == family.Id))
-            db.Categories.AddRange(
-                Category(family.Id,"Sueldo",TransactionType.Income,"#42B596"), Category(family.Id,"Otros ingresos",TransactionType.Income,"#42B596"),
-                Category(family.Id,"Alimentación",TransactionType.Expense,"#EC826D"), Category(family.Id,"Servicios",TransactionType.Expense,"#E4B548"),
-                Category(family.Id,"Transporte",TransactionType.Expense,"#7964D1"), Category(family.Id,"Vivienda",TransactionType.Expense,"#627CDB"),
-                Category(family.Id,"Salud",TransactionType.Expense,"#E96D92"), Category(family.Id,"Ocio",TransactionType.Expense,"#8D909D"),
-                Category(family.Id,"Otros",TransactionType.Expense,"#8D909D"));
+        var desiredCategories = new[]
+        {
+            ("Alimentación", TransactionType.Expense, "#EC826D"),
+            ("Ahorro", TransactionType.Expense, "#42B596"),
+            ("Otros", TransactionType.Expense, "#8D909D"),
+            ("Servicios", TransactionType.Expense, "#E4B548"),
+            ("Sueldo", TransactionType.Income, "#42B596"),
+            ("Transporte", TransactionType.Expense, "#7964D1")
+        };
+        var existingNames = await db.Categories.Where(x => x.FamilyId == family.Id).Select(x => x.Name).ToListAsync();
+        foreach (var item in desiredCategories.Where(x => !existingNames.Contains(x.Item1)))
+            db.Categories.Add(Category(family.Id, item.Item1, item.Item2, item.Item3));
         await db.SaveChangesAsync();
     }
 

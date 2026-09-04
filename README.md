@@ -35,9 +35,9 @@ cd frontend
 npm start
 ```
 
-Cuentas de prueba: Administrador `admin@cashboard.cl` / `Admin1234!`; Visita `visita@cashboard.cl` / `Visita1234!`. La API crea automáticamente `cashboard-demo.db` sin registros financieros precargados. La base SQLite local está ignorada por Git.
+Cuentas de prueba para una base nueva: Administrador `admin@cashboard.cl` / `Admin1234!`; Familia `familia@cashboard.cl` / `Familia1234!`. La API crea automáticamente `cashboard-demo.db` sin registros financieros precargados. La base SQLite local está ignorada por Git.
 
-El administrador puede gestionar usuarios desde **Configuración**: crear cuentas, cambiar datos o roles y eliminar usuarios. La cuenta Visita no ve Configuración y todas sus operaciones de escritura son rechazadas por la API.
+El administrador puede gestionar usuarios desde **Configuración**: crear cuentas, cambiar datos o roles y eliminar usuarios. La cuenta Familia no ve Configuración y todas sus operaciones de escritura son rechazadas por la API.
 
 Desde la misma pantalla el administrador puede personalizar el nombre del plan familiar. El modo nocturno y el menú de cierre de sesión están disponibles en la barra lateral.
 
@@ -57,7 +57,7 @@ Para desarrollo local usa .NET SDK 10. SQLite se crea y carga automáticamente; 
 
 ## Arquitectura y permisos
 
-La separación `frontend` / `backend` mantiene la UI desacoplada de la API REST. Todas las entidades se filtran por el `FamilyId` incorporado en el JWT. `Admin` dispone de CRUD completo; `Visitor` puede consultar dashboard y módulos, pero la API rechaza sus mutaciones con HTTP 403. Antes de producción deben configurarse secretos por variables de entorno y refresh tokens.
+La separación `frontend` / `backend` mantiene la UI desacoplada de la API REST. Todas las entidades se filtran por el `FamilyId` incorporado en el JWT. `Admin` dispone de CRUD completo; `Family` puede consultar dashboard y módulos, pero la API rechaza sus mutaciones con HTTP 403. Antes de producción deben configurarse secretos por variables de entorno y refresh tokens.
 
 ## API principal
 
