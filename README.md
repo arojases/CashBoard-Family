@@ -2,6 +2,12 @@
 
 Dashboard financiero familiar full stack para administrar ingresos, gastos, presupuestos, metas de ahorro y deudas. Diseñado como proyecto profesional de portafolio con una interfaz responsive y datos demo en CLP.
 
+## Vista previa
+
+![CashBoard Family: dashboard financiero y últimos movimientos](docs/images/cashboard.jpg)
+
+Captura de la aplicación en ejecución con el resumen financiero, últimos movimientos y panel de presupuestos.
+
 ## Funcionalidades implementadas
 
 - Inicio de sesión con JWT y roles Admin / Family.
