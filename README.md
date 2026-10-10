@@ -2,6 +2,15 @@
 
 Dashboard financiero familiar full stack para administrar ingresos, gastos, presupuestos, metas de ahorro y deudas. Diseñado como proyecto profesional de portafolio con una interfaz responsive y datos demo en CLP.
 
+## Funcionalidades implementadas
+
+- Inicio de sesión con JWT y roles Admin / Family.
+- Dashboard de ingresos, gastos, ahorro y deuda en CLP.
+- Gestión de movimientos, presupuestos, metas de ahorro y deudas.
+- Administración de usuarios y nombre del plan familiar.
+- Frontend conectado a la API mediante HttpClient e interceptor JWT.
+- Filtros de movimientos, modo nocturno e interfaz responsive.
+
 ## Stack
 
 - Angular 20 standalone + Signals + SCSS
@@ -35,7 +44,7 @@ cd frontend
 npm start
 ```
 
-Cuentas de prueba para una base nueva: Administrador `admin@cashboard.cl` / `Admin1234!`; Familia `familia@cashboard.cl` / `Familia1234!`. La API crea automáticamente `cashboard-demo.db` sin registros financieros precargados. La base SQLite local está ignorada por Git.
+Las cuentas de desarrollo se definen en `backend/CashBoard.Api/Data/DemoSeeder.cs`; revisa ese archivo para la configuración local. La API crea automáticamente `cashboard-demo.db` sin registros financieros precargados. La base SQLite local está ignorada por Git.
 
 El administrador puede gestionar usuarios desde **Configuración**: crear cuentas, cambiar datos o roles y eliminar usuarios. La cuenta Familia no ve Configuración y todas sus operaciones de escritura son rechazadas por la API.
 
@@ -72,12 +81,16 @@ La separación `frontend` / `backend` mantiene la UI desacoplada de la API REST.
 | GET/POST | `/api/savings-goals` | Metas de ahorro |
 | GET | `/api/debts` | Deudas |
 
-## Próximas fases
+## Próximas mejoras
 
-1. Añadir migraciones y seeder transaccional para usuarios/categorías demo.
-2. Conectar servicios Angular a la API y agregar interceptor JWT y guards.
-3. Completar CRUD, validación FluentValidation, aportes/pagos y filtros paginados.
-4. Agregar pruebas xUnit/Jasmine, exportación PDF/Excel y CI/CD.
-5. Desplegar Angular en Vercel/Netlify y API/PostgreSQL en Render, Railway o Azure.
+- Revisar migraciones y datos de demostración reproducibles.
+- Fortalecer validación de entradas, autenticación y manejo de errores.
+- Añadir pruebas de aislamiento entre familias y permisos de escritura.
+- Incorporar exportación PDF/Excel, filtros paginados y CI/CD.
+- Preparar un despliegue público con secretos y persistencia configurados.
 
 No uses las credenciales ni la clave JWT de desarrollo en producción.
+
+## Reportar problemas y colaborar
+
+Abre un issue con los pasos para reproducir el problema, el resultado esperado y el resultado obtenido. Incluye navegador o versión del entorno cuando sea relevante y evita publicar datos personales o credenciales. Para proponer una mejora, explica el caso de uso y el alcance antes de enviar un pull request.
